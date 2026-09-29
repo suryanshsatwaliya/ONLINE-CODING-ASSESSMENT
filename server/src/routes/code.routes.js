@@ -1,0 +1,16 @@
+import { Router } from "express";
+import * as c from "../controllers/code.controller.js";
+import { auth } from "../middleware/auth.middleware.js";
+import { teacher } from "../middleware/teacher.middleware.js";
+import { student } from "../middleware/student.middleware.js";
+import { validate, objectIds } from "../middleware/validate.middleware.js";
+import { codeSchema } from "../validators/submission.validator.js";
+import { runLimit } from "../middleware/rateLimit.middleware.js";
+const r = Router();
+r.use(auth);
+r.use(student);
+r.get("/languages", c.languageList);
+r.post("/run", runLimit, validate(codeSchema), c.run);
+r.post("/submit", runLimit, validate(codeSchema), c.submit);
+r.get("/:id", objectIds, c.get);
+export default r;

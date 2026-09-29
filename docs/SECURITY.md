@@ -1,0 +1,31 @@
+# Security boundaries
+
+## Implemented controls
+
+Teacher passwords and assessment access codes are bcrypt hashes. JWTs have expiry, issuer, audience and algorithm checks. Every protected HTTP request rechecks the relevant account/assignment. Teacher records are scoped by createdBy. Student tokens include one assessmentId; student operations validate that scope and attempt ownership. Secrets never enter VITE variables.
+
+Zod validates request fields, option indexes, sizes and language names. IDs are validated; request JSON is capped at 256 KB. All score values are computed server-side. Draft/live transitions lock assessment content. Writes use MongoDB transactions and conditional lifecycle checks. Unique indexes cover assignments, attempts, event idempotency, results and execution records.
+
+Helmet, exact-origin CORS and rate limiting are enabled. Login limits are stricter than general API limits. Code run limits are both IP-based and optionally counted per assessment attempt. Express trusts one proxy hop for Render; change this if your hosting topology differs. In-process limiters require replacement before multi-instance scaling.
+
+Students receive explicit sanitized question projections and published result totals only. Hidden test execution output never leaves the student-safe endpoint: even stdout could contain secret inputs. Teacher result details intentionally expose full execution records and must remain teacher-only.
+
+## Authentication caveats
+
+UID verification intentionally reveals name/course/section, as requested, and is rate-limited. A shared assessment code plus UID is an access gate, not strong individual identity proof. A student who learns another student's UID and the same code could impersonate them. Use institutional SSO or individually authenticated accounts for high-stakes examinations.
+
+Browser JWTs are stored in sessionStorage for this separate-origin baseline. They are not authoritative exam state. Script injection could steal a token: keep dependencies current, avoid unsafe HTML rendering, and apply a frontend CSP compatible with Monaco if you extend the app. Tokens have no refresh/revocation table; deleting/deactivating an account is rechecked, but logout only clears this browser's token. Rotate the JWT secret for emergency global invalidation.
+
+## Code sandbox
+
+The API never uses eval, child_process, exec or spawn to execute student source. The test harness may start a trusted MongoDB executable for testing; that is unrelated to student execution. Student source goes only to the configured isolated provider. Ensure the provider enforces no outbound network, isolated filesystem, CPU, wall-time, memory and output caps. Configure secrets only on the server. Never accept execution URLs from students.
+
+AI is an optional external processor, receives source but not hidden tests, and is subject to prompt injection from code comments. Its JSON is schema-validated and reviewed by a teacher. It does not decide correctness.
+
+## Browser limits
+
+No browser website can permanently enforce fullscreen, globally block Alt+Tab, control operating-system clipboard/screenshots, enumerate arbitrary extensions, or reliably detect Always Active Window. Browser events can be suppressed or forged by a modified client. This application logs observed behavior and applies server rules to received events; it cannot prove all behavior was observed. Legitimate browser dialogs, accessibility tools or system interruptions may cause focus changes.
+
+## Operations before real use
+
+Run integration and acceptance tests against test infrastructure. Verify code sandbox isolation independently, establish backups and incident response, choose retention rules for identity/code/event records, obtain the appropriate institutional notice/consent, and load-test the expected cohort. HTTPS is mandatory outside localhost. Keep production and testing databases separate. Do not expose the sandbox directly to students or commit any real .env file.

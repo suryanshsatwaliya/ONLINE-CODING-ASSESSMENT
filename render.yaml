@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: quiz-assessment-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: CLIENT_URL
+        sync: false
+      - key: CODE_RUNNER_URL
+        sync: false
+      - key: CODE_RUNNER_API_KEY
+        sync: false
+      - key: AI_API_URL
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        sync: false

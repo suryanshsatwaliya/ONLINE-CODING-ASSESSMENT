@@ -1,0 +1,12 @@
+import { Router } from "express";
+import * as c from "../controllers/proctor.controller.js";
+import { auth } from "../middleware/auth.middleware.js";
+import { teacher } from "../middleware/teacher.middleware.js";
+import { student } from "../middleware/student.middleware.js";
+import { validate, objectIds } from "../middleware/validate.middleware.js";
+import { eventSchema } from "../validators/submission.validator.js";
+const r = Router();
+r.use(auth);
+r.use(student);
+r.post("/events", validate(eventSchema), c.create);
+export default r;

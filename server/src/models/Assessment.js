@@ -1,0 +1,27 @@
+import { model, Schema, ref } from "./shared.js";
+export default model(
+  "Assessment",
+  {
+    createdBy: ref("Teacher"),
+    title: String,
+    description: String,
+    instructions: String,
+    type: String,
+    duration: Number,
+    startTime: Date,
+    endTime: Date,
+    status: { type: String, default: "DRAFT" },
+    totalMarks: Number,
+    questions: [Schema.Types.Mixed],
+    securitySettings: Schema.Types.Mixed,
+    accessCodeHash: { type: String, select: false },
+    randomizeQuestions: Boolean,
+    randomizeOptions: Boolean,
+    publishResults: Boolean,
+    aiEnabled: Boolean,
+    aiRubric: String,
+    maxCodeRuns: Number,
+    revision: { type: Number, default: 0 },
+  },
+  [],
+);

@@ -1,0 +1,15 @@
+import { Router } from "express";
+import * as c from "../controllers/attempt.controller.js";
+import { auth } from "../middleware/auth.middleware.js";
+import { teacher } from "../middleware/teacher.middleware.js";
+import { student } from "../middleware/student.middleware.js";
+import { validate, objectIds } from "../middleware/validate.middleware.js";
+import { answerSchema } from "../validators/submission.validator.js";
+const r = Router();
+r.use(auth);
+r.use(student);
+r.post("/start", c.start);
+r.get("/:id", objectIds, c.get);
+r.patch("/:id/answers", objectIds, validate(answerSchema), c.save);
+r.post("/:id/submit", objectIds, c.submit);
+export default r;

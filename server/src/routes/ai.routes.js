@@ -1,0 +1,14 @@
+import { Router } from "express";
+import * as c from "../controllers/ai.controller.js";
+import { auth } from "../middleware/auth.middleware.js";
+import { teacher } from "../middleware/teacher.middleware.js";
+import { student } from "../middleware/student.middleware.js";
+import { validate, objectIds } from "../middleware/validate.middleware.js";
+import { runLimit } from "../middleware/rateLimit.middleware.js";
+const r = Router();
+r.use(auth);
+r.use(teacher);
+r.post("/:id", runLimit, objectIds, c.create);
+r.get("/:id", objectIds, c.get);
+r.patch("/:id", objectIds, c.approve);
+export default r;

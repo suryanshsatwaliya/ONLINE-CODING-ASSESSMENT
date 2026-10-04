@@ -16,7 +16,7 @@ export default model(
     constraints: String,
     inputFormat: String,
     outputFormat: String,
-    examples: [{ input: String, output: String }],
+    examples: [{ input: String, output: String, explanation: String }],
     starterCode: Schema.Types.Mixed,
     supportedLanguages: [String],
     timeLimit: Number,

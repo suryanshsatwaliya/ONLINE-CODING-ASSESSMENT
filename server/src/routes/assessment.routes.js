@@ -12,6 +12,7 @@ r.get("/:id", objectIds, c.get);
 r.use(teacher);
 r.post("/", validate(assessmentSchema), c.create);
 r.put("/:id", objectIds, validate(assessmentSchema), c.update);
+r.delete("/:id", objectIds, c.remove);
 r.post("/:id/assign", objectIds, c.assign);
 r.get("/:id/assignments", objectIds, c.assignments);
 r.post("/:id/access-code", objectIds, c.accessCode);

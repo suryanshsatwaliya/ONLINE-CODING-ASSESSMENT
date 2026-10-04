@@ -1,5 +1,9 @@
 import { Question } from "../models/index.js";
 import ApiError from "../utils/ApiError.js";
+import { importLeetcode } from "../services/leetcode.service.js";
+export async function importProblem(req, res) {
+  res.json(await importLeetcode(req.body.reference));
+}
 export async function list(req, res) {
   res.json(
     await Question.find({ createdBy: req.user.id })

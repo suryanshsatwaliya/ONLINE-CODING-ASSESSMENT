@@ -7,6 +7,8 @@ import {
 } from "../models/index.js";
 import { issueToken } from "../services/auth.service.js";
 import ApiError from "../utils/ApiError.js";
+import { assessmentCodeKey } from "../services/assessmentCode.service.js";
+import { assessmentDeadline } from "../services/assessmentTiming.service.js";
 export async function teacherLogin(req, res) {
   const t = await Teacher.findOne({
     email: req.body.email.toLowerCase(),
@@ -31,7 +33,7 @@ export async function studentLogin(req, res) {
     uid: req.body.uid.trim().toUpperCase(),
     status: "ACTIVE",
   });
-  const a = await Assessment.findById(req.body.assessmentId).select(
+  const a = await Assessment.findOne({ accessCodeKey: assessmentCodeKey(req.body.accessCode) }).select(
     "+accessCodeHash",
   );
   if (
@@ -39,6 +41,7 @@ export async function studentLogin(req, res) {
     !a ||
     !a.accessCodeHash ||
     !["SCHEDULED", "LIVE"].includes(a.status) ||
+    assessmentDeadline(a) <= Date.now() ||
     !(await AssessmentStudent.exists({ student: s._id, assessment: a._id })) ||
     !(await bcrypt.compare(req.body.accessCode, a.accessCodeHash))
   )

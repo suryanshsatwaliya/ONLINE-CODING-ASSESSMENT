@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   GraduationCap,
   Presentation,
@@ -14,11 +13,7 @@ export default function Home() {
     <div className="landing">
       <Navbar />
       <main>
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="hero"
-        >
+        <div className="hero">
           <span className="pill">
             <span className="dot" /> A focused space for every assessment
           </span>
@@ -74,7 +69,7 @@ export default function Home() {
               <Activity /> Live progress insights
             </span>
           </div>
-        </motion.div>
+        </div>
       </main>
       <footer>
         Designed for learning. Built with integrity.

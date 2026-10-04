@@ -20,6 +20,9 @@ MongoDB Atlas or a replica set is required; transactions do not work on standalo
 
 Questions use their bank ObjectId as the snapshot question key. Assessment question array order is the teacher order; attempt.questionOrder and optionOrders persist randomization. Answer values are arrays of original option indexes, strings for short answer, or `{code, language}` for code.
 
-Correct answers and hidden tests are removed by the explicit student projection. Do not create endpoints returning raw populated Question records to students. accessCodeHash and passwordHash are select-excluded and only loaded for authentication.
+Correct answers and hidden tests are removed by the explicit student projection. Do not create endpoints returning raw populated Question records to students. accessCodeHash, accessCodeKey and passwordHash are select-excluded and only loaded for authentication.
 
 A teacher owns their students, questions, assessments and related results. Students with attempt history cannot be deleted through the UI; deactivate them to preserve history. There is no automatic event/code retention deletion. Set a documented retention process and Atlas backup policy appropriate to your institution.
+
+
+Assessments now record the actual `startedAt`, shared `closesAt`, `endedAt`, and `endReason` (ALL_FINISHED, TIME_EXPIRED, or TEACHER). `startTime` is the optional automatic start for SCHEDULED assessments. The scheduler uses that timestamp for `startedAt`, including after downtime; drafts never start automatically. Lifecycle closure, active-attempt expiry, and coding submission queuing share an assessment transaction lock.

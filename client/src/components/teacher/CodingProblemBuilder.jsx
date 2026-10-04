@@ -3,13 +3,14 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
   const set = (k, v) => onChange({ ...q, [k]: v });
   return (
     <>
-      <div className="form-grid">
+      <div className="coding-statement-fields">
         {["description", "constraints", "inputFormat", "outputFormat"].map(
           (k) => (
             <label className="field" key={k}>
-              {k}
+              {{ description: "Problem statement", constraints: "Constraints (optional)", inputFormat: "Input format", outputFormat: "Output format" }[k]}
               <textarea
-                rows="3"
+                rows={k === "description" ? 6 : 3}
+                required={k === "description"}
                 value={q[k]}
                 onChange={(e) => set(k, e.target.value)}
               />
@@ -17,6 +18,8 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
           ),
         )}
       </div>
+      <details className="question-extra">
+      <summary>Languages, starter code & execution settings</summary>
       <div className="form-grid">
         <Input
           label="Time limit (seconds)"
@@ -36,13 +39,13 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
         <Input
           label="Quality marks (optional AI rubric)"
           type="number"
-          value={q.qualityMarks}
+          value={q.qualityMarks || ""}
           onChange={(e) => set("qualityMarks", +e.target.value)}
         />
         <Input
           label="Efficiency marks (optional AI rubric)"
           type="number"
-          value={q.efficiencyMarks}
+          value={q.efficiencyMarks || ""}
           onChange={(e) => set("efficiencyMarks", +e.target.value)}
         />
       </div>
@@ -74,11 +77,13 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
           />
         </details>
       ))}
+      </details>
       <h3>Examples</h3>
       {q.examples.map((t, i) => (
         <div className="form-grid" key={i}>
-          <Input
-            label="Example input"
+          <label className="field">Example input
+          <textarea
+            rows="3"
             value={t.input}
             onChange={(e) =>
               set(
@@ -89,8 +94,10 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
               )
             }
           />
-          <Input
-            label="Example output"
+          </label>
+          <label className="field">Example output
+          <textarea
+            rows="3"
             value={t.output}
             onChange={(e) =>
               set(
@@ -101,6 +108,10 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
               )
             }
           />
+          </label>
+          <label className="field">Explanation (optional)
+            <textarea rows={2} value={t.explanation || ""} onChange={(e) => set("examples", q.examples.map((x, j) => i === j ? { ...x, explanation: e.target.value } : x))} />
+          </label>
           <button
             type="button"
             onClick={() =>
@@ -117,14 +128,14 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
       <button
         type="button"
         onClick={() =>
-          set("examples", [...q.examples, { input: "", output: "" }])
+          set("examples", [...q.examples, { input: "", output: "", explanation: "" }])
         }
       >
         + Add example
       </button>
       <h3>Test cases</h3>
       <p className="muted">
-        At least one hidden test is required. Use visible cases for Run Code.
+        Visible cases are used for Run Code. Add at least one hidden grading case before using this problem in an assessment.
       </p>
       {q.testCases.map((t, i) => (
         <div className="test-builder" key={i}>

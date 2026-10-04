@@ -1,0 +1,147 @@
+import { updateAssessmentTiming } from "../../utils/assessmentTiming";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Check, ClipboardList, Code2, Layers3, Clock3, ShieldCheck, Users, BookOpen, CheckCircle2 } from "lucide-react";
+import { api, errorMessage } from "../../services/api";
+import { useToast } from "../../components/common/Toast";
+import Input from "../../components/common/Input";
+import Button from "../../components/common/Button";
+import AssessmentQuestionPicker, { questionCount } from "../../components/teacher/AssessmentQuestionPicker";
+import SecuritySettings, { defaultSecurity } from "../../components/teacher/SecuritySettings";
+
+const steps = ["The basics", "Choose questions", "Assessment rules", "Review & save"];
+const types = [["QUIZ", "Quiz", "MCQs and knowledge checks", ClipboardList], ["CODING", "Coding", "Programming challenges", Code2], ["MIXED", "Mixed", "The best of both formats", Layers3]];
+const initial = { title: "", description: "", instructions: "", type: "QUIZ", duration: 60, status: "DRAFT", startTime: null, endTime: null, questionIds: [], questionSetIds: [], securitySettings: defaultSecurity, randomizeQuestions: false, randomizeOptions: false, publishResults: false, aiEnabled: false, aiRubric: "Assess code quality, readability and algorithmic efficiency.", maxCodeRuns: 0 };
+const localDate = (value) => value ? new Date(new Date(value).getTime() - new Date(value).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "";
+
+export default function NewAssessment() {
+  const [form, setForm] = useState(() => structuredClone(initial));
+  const [sets, setSets] = useState([]), [bank, setBank] = useState([]), [students, setStudents] = useState([]);
+  const [step, setStep] = useState(0), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState("");
+  const [error, setError] = useState(""), [saving, setSaving] = useState(false);
+  const [assigned, setAssigned] = useState([]), [studentSearch, setStudentSearch] = useState("");
+  const pending = useRef(false), createdId = useRef(null), formElement = useRef(null), heading = useRef(null);
+  const nav = useNavigate(), toast = useToast();
+  const total = questionCount(sets, form);
+  const selectedSets = form.questionSetIds.map((id) => sets.find((set) => set._id === id)).filter(Boolean);
+  const points = selectedSets.reduce((sum, set) => sum + set.totalMarks, 0) + form.questionIds.reduce((sum, id) => sum + (bank.find((q) => q._id === id)?.marks || 0), 0);
+  const set = (key, value) => setForm((previous) => updateAssessmentTiming(previous, key, value));
+  async function load() {
+    setLoading(true); setLoadError("");
+    try {
+      const [q, library, roster] = await Promise.all([api.get("/questions"), api.get("/question-sets"), api.get("/students")]);
+      setBank(q.data); setSets(library.data); setStudents(roster.data);
+    } catch (e) { setLoadError(errorMessage(e)); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, []);
+  const refreshQuestions = useCallback(async () => {
+    const [questions, library] = await Promise.all([api.get("/questions"), api.get("/question-sets")]);
+    setBank(questions.data); setSets(library.data);
+  }, []);
+  useEffect(() => {
+    heading.current?.focus({ preventScroll: true });
+    heading.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  }, [step]);
+  function selectType(type) {
+    setForm((previous) => ({ ...previous, type,
+      questionSetIds: previous.questionSetIds.filter((id) => sets.some((item) => item._id === id && (type === "MIXED" || item.type === type))),
+      questionIds: previous.questionIds.filter((id) => bank.some((q) => q._id === id && (type === "MIXED" || (type === "CODING" ? q.type === "CODING" : q.type !== "CODING")))),
+    }));
+  }
+  function validate(index) {
+    if (index === 0 && (!form.title.trim() || form.title.length > 200)) return "Give your assessment a title (up to 200 characters).";
+    if (index === 1 && (!total || total > 100)) return "Select between 1 and 100 questions from your saved sets or individual questions.";
+    if (index === 2) {
+      if (!Number.isInteger(form.duration) || form.duration < 1 || form.duration > 480) return "Choose a duration between 1 and 480 minutes.";
+      if (form.startTime && form.endTime && new Date(form.endTime) <= new Date(form.startTime)) return "The closing time must be after the earliest start time.";
+      if (!Number.isInteger(form.securitySettings.maxWarnings) || form.securitySettings.maxWarnings < 1 || form.securitySettings.maxWarnings > 100) return "Choose between 1 and 100 maximum warnings.";
+      if (!Number.isInteger(form.maxCodeRuns) || form.maxCodeRuns < 0 || form.maxCodeRuns > 1000) return "Code runs must be between 0 and 1000.";
+    }
+    return "";
+  }
+  function moveTo(next) {
+    if (saving) return;
+    if (next > step) {
+      if (!formElement.current.reportValidity()) return;
+      for (let index = 0; index < next; index++) {
+        const message = validate(index);
+        if (message) { setStep(index); setError(message); return; }
+      }
+    }
+    setError(""); setStep(next);
+  }
+  async function submit(event) {
+    event.preventDefault();
+    if (step < 3) { moveTo(step + 1); return; }
+    if (pending.current) return;
+    for (let index = 0; index < 3; index++) {
+      const message = validate(index);
+      if (message) { setStep(index); setError(message); return; }
+    }
+    pending.current = true; setSaving(true); setError("");
+    try {
+      // Reuse an already created draft if assigning students needs a retry.
+      const { data } = createdId.current
+        ? await api.put("/assessments/" + createdId.current, form)
+        : await api.post("/assessments", form);
+      createdId.current = data._id;
+      await api.post("/assessments/" + data._id + "/assign", { studentIds: assigned });
+      toast("Assessment saved. Generate an access code when you’re ready to invite students.");
+      nav("/teacher/assessments/" + data._id);
+    } catch (e) {
+      setError((createdId.current ? "Your assessment is saved, but setup is not complete. Retry to finish without creating a duplicate. " : "") + errorMessage(e));
+    } finally { pending.current = false; setSaving(false); }
+  }
+  if (loading) return <div className="assessment-setup"><div className="as-panel as-loading" role="status">Preparing your assessment studio…</div></div>;
+  if (loadError) return <div className="assessment-setup"><div className="as-panel as-loading" role="alert"><p>{loadError}</p><Button onClick={load}>Try again</Button></div></div>;
+  return (
+    <div className="assessment-setup">
+      <Link className="as-back" to="/teacher/assessments"><ArrowLeft size={16} /> All assessments</Link>
+      <header className="as-heading"><div><span className="ah-kicker">ASSESSMENT STUDIO</span><h1>Build your next challenge.</h1><p>A few thoughtful choices. One great assessment.</p></div><span className="as-draft-label">{createdId.current ? "Saved · finish setup" : "New assessment"}</span></header>
+      <nav className="as-steps" aria-label="Assessment setup steps">
+        {steps.map((label, index) => <button type="button" key={label} disabled={saving} className={step === index ? "active" : step > index ? "complete" : ""} aria-current={step === index ? "step" : undefined} onClick={() => moveTo(index)}><span>{step > index ? <Check size={16} /> : `0${index + 1}`}</span><strong>{label}</strong></button>)}
+      </nav>
+      <div className="as-workspace">
+        <form id="assessment-setup-form" ref={formElement} onSubmit={submit} className="as-main">
+          <fieldset disabled={saving}>
+            <section className="as-panel as-step-panel" key={step}>
+              <div className="as-panel-heading"><span className="as-section-number">STEP 0{step + 1}</span><h2 tabIndex={-1} ref={heading}>{["Let’s start with the basics", "Curate the right questions", "Set the ground rules", "One last look"][step]}</h2><p>{["Give this assessment a name and choose how students will be challenged.", "Bring in content you’ve already prepared in the Question Bank.", "Choose the timing and controls that fit your classroom.", "Review your setup and choose who can take this assessment."][step]}</p></div>
+              {step === 0 && <>
+                <Input label="Assessment title" placeholder="e.g. Data structures · Midterm quiz" required maxLength={200} value={form.title} onChange={(e) => set("title", e.target.value)} />
+                <fieldset className="as-type-selector"><legend>Assessment format</legend><div className="as-type-grid">{types.map(([value, label, description, Icon]) => <label className={form.type === value ? "selected" : ""} key={value}><input type="radio" name="assessment-format" value={value} checked={form.type === value} onChange={() => selectType(value)} /><Icon size={24} /><strong>{label}</strong><small>{description}</small><span className="as-type-check"><Check size={12} /></span></label>)}</div></fieldset>
+                {!!total && <small className="as-selection-note">Changing format keeps compatible questions and removes the others.</small>}
+                <label className="field">Description <span className="as-optional">Optional</span><textarea rows={3} placeholder="What should students know about this assessment?" value={form.description} maxLength={20000} onChange={(e) => set("description", e.target.value)} /></label>
+                <details className="as-disclosure"><summary>Instructions for students</summary><label className="field">Instructions<textarea rows={4} placeholder="Add any instructions students should read before starting." value={form.instructions} maxLength={20000} onChange={(e) => set("instructions", e.target.value)} /></label></details>
+              </>}
+              {step === 1 && <AssessmentQuestionPicker showHeading={false} sets={sets} bank={bank} form={form} onChange={setForm} onRefresh={refreshQuestions} />}
+              {step === 2 && <>
+                <div className="as-subheading"><Clock3 size={19} /><h3>Timing & availability</h3></div>
+                <div className="form-grid"><Input label="Duration (minutes)" type="number" required min={1} max={480} value={form.duration} onChange={(e) => set("duration", e.target.value === "" ? "" : Number(e.target.value))} /><label className="field">Save as<select value={form.status} onChange={(e) => set("status", e.target.value)}><option value="DRAFT">Draft · prepare for later</option><option value="SCHEDULED">Scheduled · allow lobby access</option></select></label></div>
+                <p className="as-help">Scheduled assessments start automatically at the chosen time. They end when time runs out or every assigned student finishes. Late joiners receive only the remaining time.</p>
+                <details className="as-disclosure"><summary>Schedule the assessment <span>Optional</span></summary><div className="form-grid">{[["startTime", "Scheduled start time"], ["endTime", "Hard closing time"]].map(([key, label]) => <Input key={key} label={label} type="datetime-local" readOnly={key === "endTime" && Boolean(form.startTime)} value={localDate(form[key])} onChange={(e) => set(key, e.target.value ? new Date(e.target.value).toISOString() : null)} />)}</div><small>Hard close is calculated from the start time plus duration. Save as Scheduled, assign students and generate an access code before the start. Without a start time, you can start manually.</small></details>
+                <div className="as-subheading"><ShieldCheck size={19} /><h3>Assessment integrity</h3></div>
+                <div className="as-security-note"><ShieldCheck size={22} /><div><strong>Your classroom, your rules</strong><p>Fullscreen, browser monitoring and clipboard controls use your configured settings.</p></div></div>
+                <details className="as-disclosure"><summary>Review and customize security</summary><SecuritySettings value={form.securitySettings} onChange={(value) => set("securitySettings", value)} /></details>
+                <div className="as-subheading"><Layers3 size={19} /><h3>Question delivery</h3></div>
+                <div className="as-option-stack">{[["randomizeQuestions", "Shuffle question order", "Give students a different order of questions."], ["randomizeOptions", "Shuffle answer options", "Randomize the options within each multiple-choice question."]].map(([key, label, description]) => <label key={key}><span><strong>{label}</strong><small>{description}</small></span><input type="checkbox" checked={form[key]} onChange={(e) => set(key, e.target.checked)} /></label>)}</div>
+                {form.type !== "QUIZ" && <details className="as-disclosure"><summary>Coding & AI review settings</summary><Input label="Code runs per student (leave blank for unlimited)" type="number" min={0} max={1000} value={form.maxCodeRuns || ""} onChange={(e) => set("maxCodeRuns", Number(e.target.value))} /><label className="check"><input type="checkbox" checked={form.aiEnabled} onChange={(e) => set("aiEnabled", e.target.checked)} />Enable teacher-reviewed AI feedback</label>{form.aiEnabled && <label className="field">AI rubric<textarea value={form.aiRubric} onChange={(e) => set("aiRubric", e.target.value)} /></label>}</details>}
+              </>}
+              {step === 3 && <>
+                <div className="as-review-banner"><CheckCircle2 size={26} /><div><strong>{form.title}</strong><span>{form.type === "QUIZ" ? "Quiz" : form.type === "CODING" ? "Coding" : "Mixed"} · {total} questions · {form.duration} minutes</span></div><button type="button" onClick={() => moveTo(0)}>Edit</button></div>
+                <h3>Selected content</h3><div className="as-review-sets">{selectedSets.map((item) => <div key={item._id}><BookOpen size={17} /><span>{item.title}</span><small>{item.questionCount} questions</small></div>)}{!!form.questionIds.length && <div><BookOpen size={17} /><span>Individual bank questions</span><small>{form.questionIds.length} questions</small></div>}</div>
+                <div className="as-subheading"><Users size={19} /><h3>Assign students <span className="as-optional">Optional</span></h3></div><p className="as-help">Select students now, or assign them after saving.</p>
+                <input className="search" aria-label="Search students to assign" placeholder="Search by name, UID, course or section…" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} />
+                <div className="as-student-list">{students.filter((s) => `${s.name} ${s.uid} ${s.course} ${s.section}`.toLowerCase().includes(studentSearch.toLowerCase())).map((s) => <label key={s._id}><input type="checkbox" checked={assigned.includes(s._id)} onChange={(e) => setAssigned(e.target.checked ? [...assigned, s._id] : assigned.filter((id) => id !== s._id))} /><span><strong>{s.name}</strong><small>{s.uid} · {s.course} · {s.section}</small></span></label>)}{!students.length && <p>No students yet. You can assign them from the saved assessment later.</p>}</div>
+                <p className="as-help">{assigned.length} students selected. Generate an access code after saving. A Scheduled assessment with a start time launches automatically once students are assigned and a code is ready.</p>
+              </>}
+              {error && <p className="notice error" role="alert">{error}</p>}
+              <footer className="as-step-footer"><Button type="button" variant="secondary" disabled={step === 0 || saving} onClick={() => moveTo(step - 1)}><ArrowLeft size={16} /> Back</Button><span>{step + 1} of 4</span><Button type="submit" disabled={saving}>{saving ? "Saving…" : step === 3 ? "Save assessment" : "Continue"}{step === 3 ? <Check size={16} /> : <ArrowRight size={16} />}</Button></footer>
+            </section>
+          </fieldset>
+        </form>
+        <aside className="as-summary"><div className="as-summary-top"><span className="ah-kicker">AT A GLANCE</span><span className={`ah-status status-${form.status.toLowerCase()}`}><i />{form.status === "DRAFT" ? "Draft" : "Scheduled"}</span></div><h3>{form.title || "Your next assessment"}</h3><p>{form.type === "MIXED" ? "Quiz & coding" : form.type === "QUIZ" ? "Quiz assessment" : "Coding assessment"}</p><div className="as-summary-numbers"><div><strong>{total}</strong><small>Questions</small></div><div><strong>{points}</strong><small>Base points</small></div><div><strong>{form.duration || "—"}</strong><small>Minutes</small></div></div><ul><li><BookOpen size={17} /><span>{selectedSets.length} saved sets selected</span></li><li><Users size={17} /><span>{assigned.length ? `${assigned.length} students selected` : "Assign students when ready"}</span></li><li><ShieldCheck size={17} /><span>{form.securitySettings.requireFullscreen ? "Fullscreen required" : "Fullscreen optional"}</span></li></ul><div className="as-summary-tip"><strong>Make it yours.</strong><p>Questions stay safely in your bank. This assessment gets its own copy.</p></div></aside>
+      </div>
+    </div>
+  );
+}

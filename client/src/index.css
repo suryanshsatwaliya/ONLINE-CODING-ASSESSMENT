@@ -1,4 +1,119 @@
 @import "tailwindcss";
+@import "./assessment-studio.css";
+@import "./assessment-access.css";
+.question-set-studio { max-width: 920px; margin: 0 auto; }
+.question-set-studio .page-title { align-items: end; }
+.question-set-studio .back-link { display: inline-block; color: #6255cf; margin-bottom: 18px; font-size: 14px; }
+.studio-status { color: #768099; font-size: 13px; white-space: nowrap; }
+.question-set-studio .set-title-card { border-top: 7px solid #6554d9; padding: 30px; }
+.set-title-card input { font-size: 24px; font-weight: 650; }
+.question-set-studio .form-question-card { padding: 28px; border-left: 4px solid transparent; }
+.question-set-studio .form-question-card:focus-within { border-left-color: #6554d9; }
+.question-card-toolbar { margin-bottom: 22px; gap: 12px; }
+.question-number { background: #efedfe; color: #5f50c8; font-weight: 700; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; }
+.question-tools button { display: grid; place-items: center; padding: 7px; border-radius: 8px; }
+.question-tools button:hover:not(:disabled) { background: #efedfe; }
+.quiz-option { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid #e3e7ef; border-radius: 10px; margin: 10px 0; }
+.quiz-option.is-correct { border-color: #ada4ee; background: #f8f7ff; }
+.quiz-option input[type="text"], .quiz-option input:not([type]) { border: 0; box-shadow: none; background: transparent; padding: 8px; flex: 1; min-width: 0; }
+.quiz-option input[type="radio"], .quiz-option input[type="checkbox"] { flex-shrink: 0; accent-color: #6554d9; }
+.quiz-option button { font-size: 22px; padding: 0 8px; }
+.answer-hint { font-size: 13px; margin: 0 0 8px; }
+.add-option { margin: 8px 0 18px; }
+.question-extra { margin-top: 18px; color: #526078; }
+.question-extra[open] > summary { margin-bottom: 18px; }
+.add-question-wide { width: 100%; justify-content: center; border-style: dashed !important; padding: 16px !important; }
+.set-save-bar { position: sticky; bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 24px; padding: 18px 24px; background: #fff; border: 1px solid #dedfec; border-radius: 14px; box-shadow: 0 6px 25px #18243b10; z-index: 5; }
+.set-save-bar > span { font-size: 14px; color: #6b768c; }
+.bank-set-card h2 { margin: 22px 0 10px; }
+.bank-set-card p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bank-set-card a { color: #6255cf; font-weight: 650; }
+.bank-legacy-heading { margin: 28px 0 16px; }
+.saved-set-options { display: grid; gap: 12px; margin: 16px 0; }
+.saved-set-option { display: flex; align-items: center; gap: 16px; border: 1px solid #e0e5ef; padding: 18px; border-radius: 12px; cursor: pointer; }
+.saved-set-option.selected { background: #f6f4ff; border-color: #aca0ec; }
+.saved-set-option > span:first-of-type { flex: 1; }
+.saved-set-option input { accent-color: #6554d9; }
+.saved-set-option small { margin-top: 5px; }
+.selected-set-order { margin: 22px 0; }
+.selected-set-order .row { padding: 10px 0; }
+.selected-set-order button { padding: 4px 10px; }
+.selection-total { font-weight: 650; margin: 20px 0; }
+.source-reference { font-size: 13px; }
+.source-reference a { color: #6255cf; }
+@media (max-width: 640px) {
+  .question-set-studio .set-title-card, .question-set-studio .form-question-card { padding: 18px; }
+  .question-set-studio .page-title { align-items: start; }
+  .set-save-bar { padding: 14px; flex-wrap: wrap; }
+  .saved-set-option { flex-wrap: wrap; }
+}
+.create-assessment-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+.create-assessment-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.create-assessment-menu > summary::-webkit-details-marker { display: none; }
+.assessment-menu-options {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(340px, 85vw);
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #dce2ed;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px #18243b20;
+  z-index: 20;
+}
+.assessment-menu-options > a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 10px;
+}
+.assessment-menu-options > a:hover,
+.assessment-menu-options > a:focus-visible { background: #f1f0ff; }
+.assessment-question-editor {
+  margin: 22px 0;
+  padding: clamp(16px, 3vw, 28px);
+  border: 1px solid #dce2ed;
+  border-radius: 16px;
+  background: #fff;
+}
+.question-editor-heading {
+  border-bottom: 1px solid #e8ebf2;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+.question-editor-heading h3 { margin: 0; overflow-wrap: anywhere; }
+.question-editor-actions { margin: 20px 0; }
+.existing-question-picker {
+  padding: 16px;
+  margin: 20px 0;
+  background: #f6f8fc;
+  border-radius: 12px;
+}
+.existing-question-picker > summary { cursor: pointer; font-weight: 650; }
+.existing-question-picker[open] > summary { margin-bottom: 16px; }
+.leetcode-import {
+  background: #f4f3ff;
+  border: 1px solid #e0dcff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.leetcode-import h3 { margin-top: 0; }
+.leetcode-import .row { align-items: end; margin-bottom: 12px; }
+.leetcode-import .field { flex: 1; min-width: 180px; margin-bottom: 0; }
+.leetcode-import .notice { margin-top: 16px; }
+.leetcode-import .notice p:last-child { margin-bottom: 0; }
 :root {
   font-family:
     Inter,
@@ -1224,3 +1339,8 @@ td button {
     font-size: 27px;
   }
 }
+/* Keep the scheduled countdown prominent before students enter the exam. */
+.lobby-countdown { display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 4px solid #6056df; }
+.lobby-countdown strong { display: block; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.3; font-variant-numeric: tabular-nums; color: #5147cd; }
+.lobby-countdown p { max-width: 330px; margin: 0; }
+@media (max-width: 600px) { .lobby-countdown { align-items: flex-start; flex-direction: column; gap: 12px; } }

@@ -13,9 +13,8 @@ export default function LiveMonitor() {
   const toast = useToast();
   const load = useCallback(() => {
     if (id)
-      api
-        .get("/assessments/" + id + "/monitor")
-        .then((r) => R(r.data))
+      Promise.all([api.get("/assessments/" + id + "/monitor"), api.get("/assessments")])
+        .then(([r, list]) => { R(r.data); A(list.data); })
         .catch((e) => toast(errorMessage(e)));
   }, [id]);
   const connected = useSocket(useCallback(() => load(), [load]));
@@ -50,10 +49,11 @@ export default function LiveMonitor() {
         <option value="">Choose assessment</option>
         {assessments.map((a) => (
           <option value={a._id} key={a._id}>
-            {a.title}
+            {a.title} · {a.status === "ENDED" ? "Completed" : a.status}
           </option>
         ))}
       </select>
+      {assessments.find((a) => a._id === id)?.status === "ENDED" && <p className="notice" role="status">This assessment has ended. Student submissions are available for review.</p>}
       <div className="grid three">
         {rows.map((row) => (
           <LiveStudentCard

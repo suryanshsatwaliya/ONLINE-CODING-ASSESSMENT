@@ -3,22 +3,27 @@ export default function QuestionNavigator({
   answers,
   current,
   onChange,
+  indexes,
+  labelPrefix = "Question",
 }) {
   return (
     <div className="question-nav">
       {questions.map((q, i) => {
+        const originalIndex = indexes?.[i] ?? i;
         const a = answers[q._id];
         const v = a?.value;
         const answered = Array.isArray(v)
-          ? v.length
+          ? v.length > 0
           : typeof v === "object"
-            ? v?.code
-            : !!v;
+            ? Boolean(v?.code?.trim())
+            : Boolean(String(v ?? "").trim());
         return (
           <button
             key={q._id}
-            className={`${i === current ? "current" : ""} ${answered ? "answered" : ""} ${a?.marked ? "marked" : ""}`}
-            onClick={() => onChange(i)}
+            aria-label={`${labelPrefix} ${i + 1}${answered ? ", answered" : ", unanswered"}${a?.marked ? ", marked for review" : ""}`}
+            aria-current={originalIndex === current ? "step" : undefined}
+            className={`${originalIndex === current ? "current" : ""} ${answered ? "answered" : ""} ${a?.marked ? "marked" : ""}`}
+            onClick={() => onChange(originalIndex)}
           >
             {i + 1}
           </button>

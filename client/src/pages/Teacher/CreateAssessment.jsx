@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { updateAssessmentTiming } from "../../utils/assessmentTiming";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, errorMessage } from "../../services/api";
 import { useToast } from "../../components/common/Toast";
@@ -6,6 +7,10 @@ import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
+import AssessmentAccess from "../../components/teacher/AssessmentAccess";
+import DeleteAssessmentButton from "../../components/teacher/DeleteAssessmentButton";
+import { useAssessmentUpdates } from "../../hooks/useAssessmentUpdates";
+import AssessmentQuestionPicker, { assessmentForm, availableSets, questionCount as countQuestions } from "../../components/teacher/AssessmentQuestionPicker";
 import SecuritySettings, {
   defaultSecurity,
 } from "../../components/teacher/SecuritySettings";
@@ -19,6 +24,7 @@ const blank = {
   endTime: null,
   status: "DRAFT",
   questionIds: [],
+  questionSetIds: [],
   securitySettings: defaultSecurity,
   randomizeQuestions: false,
   randomizeOptions: false,
@@ -31,19 +37,38 @@ export default function CreateAssessment() {
   const { id } = useParams(),
     nav = useNavigate(),
     toast = useToast();
-  const [form, F] = useState(structuredClone(blank)),
+  const [form, F] = useState(() => structuredClone(blank)),
     [bank, B] = useState([]),
+    [sets, setSets] = useState([]),
     [students, S] = useState([]),
     [assigned, A] = useState([]),
     [course, C] = useState(""),
     [section, Sec] = useState(""),
-    [code, Code] = useState(""),
     [confirm, Confirm] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const savePending = useRef(false);
+  const lastServerStatus = useRef(null);
   const locked = ["LIVE", "ENDED"].includes(form.status);
+  const questionCount = countQuestions(sets, form);
+  useAssessmentUpdates(useCallback(() => {
+    if (!id) return;
+    api.get("/assessments/" + id).then(({ data }) => {
+      if (lastServerStatus.current && lastServerStatus.current !== data.status) F(assessmentForm(data));
+      lastServerStatus.current = data.status;
+    }).catch(() => {});
+  }, [id]));
+  const refreshQuestions = useCallback(async () => {
+    const [questions, library] = await Promise.all([api.get("/questions"), api.get("/question-sets")]);
+    B(questions.data); setSets(library.data);
+  }, []);
   useEffect(() => {
     Promise.all([
       api.get("/questions"),
       api.get("/students"),
+      api.get("/question-sets"),
       ...(id
         ? [
             api.get("/assessments/" + id),
@@ -51,35 +76,52 @@ export default function CreateAssessment() {
           ]
         : []),
     ])
-      .then(([q, s, a, as]) => {
+      .then(([q, s, questionSets, a, as]) => {
         B(q.data);
         S(s.data);
-        if (a)
-          F({ ...a.data, questionIds: a.data.questions.map((q) => q._id) });
+        setSets(questionSets.data);
+        if (a) {
+          lastServerStatus.current = a.data.status;
+          F(assessmentForm(a.data));
+        }
         if (as) A(as.data.map((x) => x.student?._id).filter(Boolean));
       })
-      .catch((e) => toast(errorMessage(e)));
+      .catch((e) => setLoadError(errorMessage(e)))
+      .finally(() => setLoading(false));
   }, [id]);
-  const set = (k, v) => F({ ...form, [k]: v });
+  const set = (k, v) => F((previous) => updateAssessmentTiming(previous, k, v));
   async function save(e) {
     e.preventDefault();
+    if (savePending.current) return;
+    setSaveError("");
+    if (!questionCount && !id) {
+      setSaveError("Select at least one saved question set or individual question.");
+      return;
+    }
+    savePending.current = true;
+    setSaving(true);
     try {
       const { data } = id
         ? await api.put("/assessments/" + id, form)
         : await api.post("/assessments", form);
       toast("Assessment saved");
-      if (id) F({ ...data, questionIds: data.questions.map((q) => q._id) });
+      if (id) {
+        lastServerStatus.current = data.status;
+        F(assessmentForm(data));
+      }
       else nav("/teacher/assessments/" + data._id);
     } catch (e) {
-      toast(errorMessage(e));
+      setSaveError(errorMessage(e));
+    } finally {
+      savePending.current = false;
+      setSaving(false);
     }
   }
   async function action(path, body = {}) {
     try {
       const { data } = await api.post("/assessments/" + id + "/" + path, body);
-      if (data.accessCode) Code(data.accessCode);
-      else if (data.status)
-        F({ ...data, questionIds: data.questions.map((q) => q._id) });
+      if (data.status)
+        F(assessmentForm(data));
       toast(
         path === "assign"
           ? `Assigned ${data.assigned} students`
@@ -90,24 +132,30 @@ export default function CreateAssessment() {
       toast(errorMessage(e));
     }
   }
+  if (loading) return <p role="status">Loading assessment options…</p>;
+  if (loadError) return <p role="alert" className="error notice">{loadError}</p>;
   return (
     <>
       <div className="page-title">
         <div>
           <span className="eyebrow">ASSESSMENT STUDIO</span>
           <h1>{id ? form.title : "Create assessment"}</h1>
-          <p>Define the challenge, audience and assessment rules.</p>
+          <p>Choose saved question sets, configure the assessment and invite your students.</p>
         </div>
         <Badge>{form.status}</Badge>
       </div>
       {id && (
         <div className="card row wrap between">
           <div>
-            <small>ASSESSMENT ID — SHARE WITH ASSIGNED STUDENTS</small>
-            <code>{id}</code>
+            <strong>Assessment controls</strong>
+            <small>Manage the session and result visibility.</small>
+            {form.status === "SCHEDULED" && form.startTime && <small>Starts automatically at {new Date(form.startTime).toLocaleString()}. Assign students and generate an access code before then.</small>}
+            {form.status === "LIVE" && form.closesAt && <small>Automatically ends at {new Date(form.closesAt).toLocaleString()}, or when all assigned students finish.</small>}
+            {form.status === "ENDED" && form.endReason && <small>{form.endReason === "ALL_FINISHED" ? "Ended automatically: all assigned students finished." : form.endReason === "TIME_EXPIRED" ? "Ended automatically: assessment time expired." : "Ended by teacher."}</small>}
           </div>
           <div className="row">
-            {!locked && (
+            <DeleteAssessmentButton assessment={{ ...form, _id: id }} onDeleted={() => nav("/teacher/assessments", { replace: true })} />
+            {!locked && !(form.status === "SCHEDULED" && form.startTime) && (
               <Button onClick={() => Confirm("start")}>Start assessment</Button>
             )}
             {form.status === "LIVE" && (
@@ -123,7 +171,7 @@ export default function CreateAssessment() {
                     "/assessments/" + id + "/publish",
                     { publishResults: !form.publishResults },
                   );
-                  F({ ...data, questionIds: data.questions.map((q) => q._id) });
+                  F((previous) => ({ ...previous, publishResults: data.publishResults }));
                   toast("Result visibility updated");
                 } catch (e) {
                   toast(errorMessage(e));
@@ -135,8 +183,9 @@ export default function CreateAssessment() {
           </div>
         </div>
       )}
+      {id && <AssessmentAccess key={id} id={id} status={form.status} />}
       <form onSubmit={save}>
-        <fieldset disabled={locked}>
+        <fieldset disabled={locked || saving}>
           <section className="card">
             <h2>01 / Assessment details</h2>
             <div className="form-grid">
@@ -150,12 +199,20 @@ export default function CreateAssessment() {
                 Assessment type
                 <select
                   value={form.type}
-                  onChange={(e) => set("type", e.target.value)}
+                  onChange={(e) => {
+                    const type = e.target.value;
+                    const compatible = (q) => type === "MIXED" || (type === "CODING" ? q.type === "CODING" : q.type !== "CODING");
+                    F({ ...form, type,
+                      questionSetIds: form.questionSetIds.filter((id) => availableSets(sets, form).some((set) => set._id === id && (type === "MIXED" || set.type === type))),
+                      questionIds: form.questionIds.filter((id) => [...bank, ...(form.questions || [])].some((q) => q._id === id && compatible(q))),
+                    });
+                  }}
                 >
                   <option>QUIZ</option>
                   <option>CODING</option>
                   <option>MIXED</option>
                 </select>
+                <small>Only compatible saved sets are shown. Changing type removes incompatible selections.</small>
               </label>
               <Input
                 label="Duration (minutes)"
@@ -180,10 +237,11 @@ export default function CreateAssessment() {
                   key={k}
                   label={
                     k === "startTime"
-                      ? "Earliest teacher start (optional)"
+                      ? "Scheduled start time (optional)"
                       : "Hard closing time (optional)"
                   }
                   type="datetime-local"
+                  readOnly={k === "endTime" && Boolean(form.startTime)}
                   value={
                     form[k]
                       ? new Date(
@@ -216,57 +274,7 @@ export default function CreateAssessment() {
             ))}
           </section>
           <section className="card">
-            <h2>02 / Questions</h2>
-            <p>Select questions from the bank. Use arrows to set the order.</p>
-            {bank.map((q) => (
-              <label className="question-select" key={q._id}>
-                <input
-                  type="checkbox"
-                  checked={form.questionIds.includes(q._id)}
-                  onChange={(e) =>
-                    set(
-                      "questionIds",
-                      e.target.checked
-                        ? [...form.questionIds, q._id]
-                        : form.questionIds.filter((x) => x !== q._id),
-                    )
-                  }
-                />
-                <strong>{q.title}</strong>
-                <Badge>{q.type}</Badge>
-                <span>{q.marks} marks</span>
-              </label>
-            ))}
-            {!bank.length && (
-              <p>Create questions in the Question Bank first.</p>
-            )}
-            <ol>
-              {form.questionIds.map((qid, i) => (
-                <li className="row between" key={qid}>
-                  <span>
-                    {i + 1}.{" "}
-                    {bank.find((q) => q._id === qid)?.title ||
-                      form.questions?.find((q) => q._id === qid)?.title}
-                  </span>
-                  <span>
-                    {[-1, 1].map((d) => (
-                      <button
-                        type="button"
-                        key={d}
-                        disabled={i + d < 0 || i + d >= form.questionIds.length}
-                        onClick={() => {
-                          const arr = [...form.questionIds];
-                          [arr[i], arr[i + d]] = [arr[i + d], arr[i]];
-                          set("questionIds", arr);
-                        }}
-                      >
-                        {d < 0 ? "↑" : "↓"}
-                      </button>
-                    ))}
-                  </span>
-                </li>
-              ))}
-            </ol>
+            <AssessmentQuestionPicker sets={sets} bank={bank} form={form} onChange={F} onRefresh={locked ? undefined : refreshQuestions} />
             <div className="row wrap">
               {["randomizeQuestions", "randomizeOptions", "aiEnabled"].map(
                 (k) => (
@@ -305,12 +313,13 @@ export default function CreateAssessment() {
               onChange={(v) => set("securitySettings", v)}
             />
           </section>
-          {!locked && <Button>Save assessment</Button>}
+          {saveError && <p className="error notice" role="alert">{saveError}</p>}
+          {!locked && <Button disabled={saving || questionCount > 100}>{saving ? "Saving assessment…" : "Save assessment"}</Button>}
         </fieldset>
       </form>
       {id && !locked && (
         <section className="card">
-          <h2>04 / Assign students & access</h2>
+          <h2>04 / Assign students</h2>
           <p>
             Save assignment separately. Selected students plus matching
             course/section are included.
@@ -357,21 +366,7 @@ export default function CreateAssessment() {
             >
               Save assignment
             </Button>
-            <Button variant="secondary" onClick={() => action("access-code")}>
-              Generate / rotate access code
-            </Button>
           </div>
-          {code && (
-            <div className="notice">
-              <strong>
-                Access code: <code>{code}</code>
-              </strong>
-              <p>
-                Copy it now and share securely with assigned students. Only its
-                hash is stored.
-              </p>
-            </div>
-          )}
         </section>
       )}
       {confirm && (
@@ -388,3 +383,4 @@ export default function CreateAssessment() {
     </>
   );
 }
+

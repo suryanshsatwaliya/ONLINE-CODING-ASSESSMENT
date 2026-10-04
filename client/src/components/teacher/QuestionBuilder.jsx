@@ -1,12 +1,14 @@
+import { useId, useState } from "react";
 import Input from "../common/Input";
 import Button from "../common/Button";
 import CodingProblemBuilder from "./CodingProblemBuilder";
 import { questionTypes } from "../../utils/constants";
+import LeetcodeImport from "./LeetcodeImport";
 export const blankQuestion = {
   title: "",
   question: "",
   type: "SINGLE",
-  marks: 10,
+  marks: "",
   negativeMarks: 0,
   options: ["", ""],
   correctAnswer: [0],
@@ -28,10 +30,15 @@ export const blankQuestion = {
   qualityMarks: 0,
   efficiencyMarks: 0,
 };
-export default function QuestionBuilder({ value: q, onChange, onSubmit }) {
+export default function QuestionBuilder({ value: q, onChange, onSubmit, embedded = false, allowedTypes = questionTypes, onImportBusy = () => {} }) {
+  const answerGroup = useId();
+  const [importing, setImporting] = useState(false);
+  const Container = embedded ? "div" : "form";
   const set = (k, v) => onChange({ ...q, [k]: v });
   return (
-    <form onSubmit={onSubmit}>
+    <Container onSubmit={onSubmit}>
+      {q.type === "CODING" && <LeetcodeImport value={q} onChange={onChange} onBusy={(busy) => { setImporting(busy); onImportBusy(busy); }} />}
+      <fieldset disabled={importing}>
       <div className="form-grid">
         <Input
           label="Title"
@@ -55,7 +62,7 @@ export default function QuestionBuilder({ value: q, onChange, onSubmit }) {
               })
             }
           >
-            {questionTypes.map((t) => (
+            {allowedTypes.map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>
@@ -63,17 +70,18 @@ export default function QuestionBuilder({ value: q, onChange, onSubmit }) {
         <Input
           label="Marks (deterministic)"
           type="number"
+          required
           min=".1"
           step=".1"
-          value={q.marks}
-          onChange={(e) => set("marks", +e.target.value)}
+          value={q.marks || ""}
+          onChange={(e) => set("marks", e.target.value === "" ? "" : Number(e.target.value))}
         />
         <Input
           label="Negative marks"
           type="number"
           min="0"
           step=".1"
-          value={q.negativeMarks}
+          value={q.negativeMarks || ""}
           onChange={(e) => set("negativeMarks", +e.target.value)}
         />
         <label className="field">
@@ -101,7 +109,7 @@ export default function QuestionBuilder({ value: q, onChange, onSubmit }) {
       </div>
       {q.source === "EXTERNAL" && (
         <Input
-          label="External reference (e.g. LeetCode 45; provide permitted content yourself)"
+          label="External reference"
           value={q.externalReference}
           onChange={(e) => set("externalReference", e.target.value)}
         />
@@ -142,7 +150,8 @@ export default function QuestionBuilder({ value: q, onChange, onSubmit }) {
                 <div className="row option-edit" key={i}>
                   <input
                     type={q.type === "MULTIPLE" ? "checkbox" : "radio"}
-                    name="correct"
+                    name={answerGroup}
+                    aria-label={`Option ${i + 1} is correct`}
                     checked={q.correctAnswer.includes(i)}
                     onChange={() =>
                       set(
@@ -156,6 +165,7 @@ export default function QuestionBuilder({ value: q, onChange, onSubmit }) {
                     }
                   />
                   <input
+                    aria-label={`Option ${i + 1}`}
                     required
                     value={o}
                     onChange={(e) =>
@@ -196,9 +206,10 @@ export default function QuestionBuilder({ value: q, onChange, onSubmit }) {
           </label>
         </>
       )}
-      <div className="row end">
+      {!embedded && <div className="row end">
         <Button>Save question</Button>
-      </div>
-    </form>
+      </div>}
+      </fieldset>
+    </Container>
   );
 }

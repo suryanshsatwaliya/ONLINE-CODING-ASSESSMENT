@@ -1,3 +1,5 @@
+import ExamWorkspace from "../../components/assessment/ExamWorkspace";
+import { examSections } from "../../utils/examSections";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { attemptService } from "../../services/attemptService";
@@ -9,15 +11,9 @@ import { useFullscreen } from "../../hooks/useFullscreen";
 import { useProctoring } from "../../hooks/useProctoring";
 import { useAutosave } from "../../hooks/useAutosave";
 import { AssessmentContext } from "../../context/AssessmentContext";
-import AssessmentHeader from "../../components/assessment/AssessmentHeader";
-import QuestionNavigator from "../../components/assessment/QuestionNavigator";
-import MCQQuestion from "../../components/assessment/MCQQuestion";
-import ShortAnswer from "../../components/assessment/ShortAnswer";
-import CodingQuestion from "../../components/assessment/CodingQuestion";
 import WarningModal from "../../components/assessment/WarningModal";
 import SubmitDialog from "../../components/assessment/SubmitDialog";
 import Loader from "../../components/common/Loader";
-import Button from "../../components/common/Button";
 export default function Assessment() {
   const { id } = useParams(),
     nav = useNavigate(),
@@ -37,7 +33,10 @@ export default function Assessment() {
       try {
         const { data: d } = await attemptService.get(id);
         D(d);
-        if (initial) A(d.attempt.answers || {});
+        if (initial) {
+          A(d.attempt.answers || {});
+          C(examSections(d.assessment.questions)[0]?.indexes[0] ?? 0);
+        }
         if (d.attempt.status !== "ACTIVE")
           nav("/student/result/" + id, { replace: true });
       } catch (e) {
@@ -97,126 +96,14 @@ export default function Assessment() {
     }
   }
   if (!data) return error ? <p className="error">{error}</p> : <Loader />;
-  const { assessment: a, attempt: t } = data,
-    q = a.questions[current],
-    answer = answers[q?._id];
+  const { assessment: a, attempt: t } = data;
   return (
     <AssessmentContext.Provider value={{ assessment: a, attempt: t }}>
-      <div className="exam">
-        <AssessmentHeader
-          title={a.title}
-          name={user.name}
-          seconds={seconds}
-          warnings={t.warningCount}
-          max={a.securitySettings.maxWarnings}
-          connected={connected}
-          onSubmit={() => Confirm(true)}
-        />
-        {a.securitySettings.requireFullscreen && !fs.fullscreen && (
-          <div className="fullscreen-bar">
-            Fullscreen is required.{" "}
-            <Button onClick={() => fs.enter().catch((e) => E(e.message))}>
-              Return to fullscreen
-            </Button>
-          </div>
-        )}
-        <div className="exam-body">
-          <aside className="exam-sidebar">
-            <span className="eyebrow">YOUR PROGRESS</span>
-            <h3>Questions</h3>
-            <QuestionNavigator
-              questions={a.questions}
-              answers={answers}
-              current={current}
-              onChange={C}
-            />
-            <p className="muted">
-              Blue: answered
-              <br />
-              Purple dot: marked for review
-            </p>
-            <div className="save-status">{status}</div>
-          </aside>
-          <main className="exam-main">
-            {q && (
-              <>
-                <div className="row between">
-                  <span className="eyebrow">
-                    QUESTION {current + 1} OF {a.questions.length}
-                  </span>
-                  <span>
-                    {q.marks} marks{" "}
-                    {q.negativeMarks > 0 &&
-                      " / −" + q.negativeMarks + " incorrect"}
-                  </span>
-                </div>
-                {q.type === "CODING" ? (
-                  <CodingQuestion
-                    key={q._id}
-                    question={q}
-                    value={answer?.value}
-                    onChange={change}
-                    attemptId={id}
-                    flush={flush}
-                  />
-                ) : (
-                  <div className="question-content">
-                    <h2>{q.question || q.title}</h2>
-                    {q.type === "SHORT" ? (
-                      <ShortAnswer
-                        value={answer?.value || ""}
-                        onChange={change}
-                      />
-                    ) : (
-                      <MCQQuestion
-                        question={q}
-                        value={answer?.value || []}
-                        order={t.optionOrders?.[q._id]}
-                        onChange={change}
-                      />
-                    )}
-                  </div>
-                )}
-                <div className="row between wrap question-actions">
-                  <Button
-                    variant="secondary"
-                    disabled={current === 0}
-                    onClick={() => C(current - 1)}
-                  >
-                    ← Previous
-                  </Button>
-                  <button
-                    onClick={() =>
-                      change(
-                        answer?.value ??
-                          (q.type === "SHORT"
-                            ? ""
-                            : q.type === "CODING"
-                              ? {
-                                  language: q.supportedLanguages[0],
-                                  code:
-                                    q.starterCode[q.supportedLanguages[0]] ||
-                                    "",
-                                }
-                              : []),
-                        !answer?.marked,
-                      )
-                    }
-                  >
-                    {answer?.marked ? "Unmark review" : "Mark for review"}
-                  </button>
-                  <Button
-                    disabled={current === a.questions.length - 1}
-                    onClick={() => C(current + 1)}
-                  >
-                    Next question →
-                  </Button>
-                </div>
-              </>
-            )}
-            {error && <p className="error">{error}</p>}
-          </main>
-        </div>
+      <ExamWorkspace assessment={a} attempt={t} name={user.name} seconds={seconds}
+        connected={connected} answers={answers} current={current} onNavigate={C}
+        change={change} status={status} attemptId={id} flush={flush}
+        onSubmit={() => Confirm(true)} fullscreen={fs.fullscreen}
+        onFullscreen={() => fs.enter().catch((e) => E(e.message))} error={error}>
         {warning && (
           <WarningModal
             warning={warning}
@@ -235,7 +122,7 @@ export default function Assessment() {
         {confirm && (
           <SubmitDialog onClose={() => Confirm(false)} onConfirm={submit} />
         )}
-      </div>
+      </ExamWorkspace>
     </AssessmentContext.Provider>
   );
 }

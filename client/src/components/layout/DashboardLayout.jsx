@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import PageTransition from "./PageTransition";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 export default function DashboardLayout() {
@@ -8,7 +8,7 @@ export default function DashboardLayout() {
       <div className="workspace-main">
         <Header />
         <main className="content">
-          <Outlet />
+          <PageTransition />
         </main>
       </div>
     </div>

@@ -4,7 +4,9 @@ import { resultService } from "../../services/resultService";
 import { errorMessage } from "../../services/api";
 import { useFullscreen } from "../../hooks/useFullscreen";
 import Navbar from "../../components/layout/Navbar";
+import { useAuth } from "../../hooks/useAuth";
 export default function Result() {
+  const { logout } = useAuth();
   const { id } = useParams(),
     [data, D] = useState(null),
     [error, E] = useState(""),
@@ -62,8 +64,8 @@ export default function Result() {
             <p>Your teacher will publish results when they are ready.</p>
           )}
           {error && <p className="error">{error}</p>}
-          <Link className="btn" to="/student">
-            Back to student dashboard
+          <Link className="btn" to="/login/student" onClick={logout}>
+            Return to student login
           </Link>
         </div>
       </main>

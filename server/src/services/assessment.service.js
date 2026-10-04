@@ -7,6 +7,7 @@ import {
   AssessmentStudent,
 } from "../models/index.js";
 import ApiError from "../utils/ApiError.js";
+import { assessmentDeadline } from "./assessmentTiming.service.js";
 export const shuffled = (a) => {
   const b = [...a];
   for (let i = b.length - 1; i > 0; i--) {
@@ -50,7 +51,7 @@ export async function withActive(id, user, fn) {
       !a ||
       t.status !== "ACTIVE" ||
       t.expiresAt <= new Date() ||
-      (a.endTime && a.endTime <= new Date())
+      assessmentDeadline(a) <= Date.now()
     )
       throw new ApiError(409, "Attempt is closed or expired");
     if (

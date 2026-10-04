@@ -5,6 +5,5 @@ export const teacherLogin = z.object({
 });
 export const studentVerify = z.object({ uid: z.string().min(1).max(40) });
 export const studentLogin = studentVerify.extend({
-  assessmentId: z.string().regex(/^[a-f0-9]{24}$/i),
-  accessCode: z.string().min(6).max(128),
+  accessCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{6}$/, "Enter the 6-character assessment code."),
 });

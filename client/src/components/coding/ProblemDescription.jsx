@@ -20,6 +20,7 @@ export default function ProblemDescription({ question: q }) {
           <pre>{x.input}</pre>
           <small>OUTPUT</small>
           <pre>{x.output}</pre>
+          {x.explanation && <><small>EXPLANATION</small><p className="preserve">{x.explanation}</p></>}
         </div>
       ))}
     </div>

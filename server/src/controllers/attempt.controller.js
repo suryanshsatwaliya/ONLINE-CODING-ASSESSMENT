@@ -15,11 +15,15 @@ import {
 import {
   closeAttempt,
   expireAttempts,
+  finishAssessmentIfReady,
 } from "../services/attemptLifecycle.service.js";
+import { assessmentDeadline } from "../services/assessmentTiming.service.js";
+import { startScheduledAssessments } from "../services/assessmentSchedule.service.js";
 import { gradeAttempt } from "../services/grading.service.js";
 import { emitAttempt } from "../services/realtime.service.js";
 import ApiError from "../utils/ApiError.js";
 export async function start(req, res) {
+  await startScheduledAssessments(req.user.assessmentId);
   let t, a;
   await mongoose.connection.transaction(async (session) => {
     a = await Assessment.findOneAndUpdate(
@@ -27,7 +31,7 @@ export async function start(req, res) {
       { $inc: { revision: 1 } },
       { new: true, session },
     );
-    if (!a || (a.endTime && a.endTime <= new Date()))
+    if (!a || assessmentDeadline(a) <= Date.now())
       throw new ApiError(409, "Assessment has not started or has ended");
     if (
       !(await AssessmentStudent.exists({
@@ -52,7 +56,7 @@ export async function start(req, res) {
           expiresAt: new Date(
             Math.min(
               +now + a.duration * 60000,
-              a.endTime ? +a.endTime : Infinity,
+              assessmentDeadline(a),
             ),
           ),
           questionOrder: a.randomizeQuestions ? shuffled(ids) : ids,
@@ -151,6 +155,7 @@ export async function submit(req, res) {
     req.user,
     async (t, a, session) => closeAttempt(t, a, "SUBMITTED", session),
   );
+  await finishAssessmentIfReady(a._id);
   await gradeAttempt(t._id);
   emitAttempt(a, t);
   res.json({ status: t.status });

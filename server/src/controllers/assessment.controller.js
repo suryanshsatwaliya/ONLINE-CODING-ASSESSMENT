@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
-import { randomBytes } from "node:crypto";
+import { generateAssessmentCode, assessmentCodeKey } from "../services/assessmentCode.service.js";
 import { z } from "zod";
 import {
   Assessment,
   Question,
+  QuestionSet,
   Student,
   AssessmentStudent,
   Attempt,
@@ -15,18 +16,37 @@ import { emitAssessment } from "../services/realtime.service.js";
 import { closeAttempt } from "../services/attemptLifecycle.service.js";
 import { gradeAttempt } from "../services/grading.service.js";
 import ApiError from "../utils/ApiError.js";
-async function payload(body, user) {
+import { startScheduledAssessments } from "../services/assessmentSchedule.service.js";
+async function payload(body, user, previous = null) {
   const qs = await Question.find({
     _id: { $in: body.questionIds },
     createdBy: user.id,
   }).lean();
-  if (qs.length !== new Set(body.questionIds).size)
-    throw new ApiError(422, "Question unavailable");
-  const questions = body.questionIds.map((id) =>
-    qs.find((q) => String(q._id) === id),
-  );
+  const questions = body.questionIds.map((id) => {
+    const q = previous?.questions.find((q) => !q.sourceSetId && String(q._id) === id)
+      || qs.find((q) => String(q._id) === id);
+    if (!q) throw new ApiError(422, "Question unavailable");
+    return q;
+  });
   if (new Set(body.questionIds).size !== body.questionIds.length)
     throw new ApiError(422, "Duplicate questions");
+  const sets = await QuestionSet.find({ _id: { $in: body.questionSetIds }, createdBy: user.id }).lean();
+  const questionSets = [];
+  for (const id of body.questionSetIds) {
+    const snapshot = previous?.questionSets?.find((set) => String(set.setId) === id);
+    if (snapshot) {
+      // Editing settings never silently replaces the saved assessment's questions.
+      questions.push(...previous.questions.filter((q) => String(q.sourceSetId) === id));
+      questionSets.push({ setId: snapshot.setId, title: snapshot.title, type: snapshot.type, questionCount: snapshot.questionCount });
+    } else {
+      const set = sets.find((set) => String(set._id) === id);
+      if (!set) throw new ApiError(422, "A selected question set is unavailable");
+      if (!set.readyForAssessment) throw new ApiError(422, `${set.title}: add hidden grading tests in the Question Bank before using this set.`);
+      questions.push(...set.questions.map((q) => ({ ...q, sourceSetId: set._id })));
+      questionSets.push({ setId: set._id, title: set.title, type: set.type, questionCount: set.questionCount });
+    }
+  }
+  if (questions.length > 100) throw new ApiError(422, "An assessment can contain at most 100 questions");
   if (
     questions.some((q) =>
       body.type === "QUIZ"
@@ -37,10 +57,12 @@ async function payload(body, user) {
     )
   )
     throw new ApiError(422, "Question types do not match assessment type");
-  const { questionIds, ...rest } = body;
+  const { questionIds, questionSetIds, newQuestions, ...rest } = body;
   return {
     ...rest,
+    endTime: body.startTime ? new Date(+new Date(body.startTime) + body.duration * 60000) : body.endTime,
     questions,
+    questionSets,
     totalMarks: questions.reduce(
       (s, q) =>
         s +
@@ -69,33 +91,43 @@ export async function get(req, res) {
     return res.json(await ownAssessment(req.params.id, req.user));
   if (req.params.id !== req.user.assessmentId)
     throw new ApiError(403, "Access denied");
-  res.json(await Assessment.findById(req.params.id).select("-questions"));
+  await startScheduledAssessments(req.params.id);
+  const assessment = await Assessment.findById(req.params.id).select("-questions");
+  if (!assessment) throw new ApiError(404, "Assessment not found");
+  res.json({ ...assessment.toObject(), serverTime: new Date() });
 }
 export async function create(req, res) {
-  res.status(201).json(
-    await Assessment.create({
-      ...(await payload(req.body, req.user)),
-      createdBy: req.user.id,
-    }),
-  );
+  res.status(201).json(await Assessment.create({
+    ...(await payload(req.body, req.user)), createdBy: req.user.id,
+  }));
 }
 export async function update(req, res) {
-  const p = await payload(req.body, req.user);
-  const a = await Assessment.findOneAndUpdate(
-    {
+  const previous = await ownAssessment(req.params.id, req.user);
+  const p = await payload(req.body, req.user, previous);
+  const assessment = await Assessment.findOneAndUpdate(
+    { _id: req.params.id, createdBy: req.user.id, revision: previous.revision, status: { $in: ["DRAFT", "SCHEDULED"] } },
+    { $set: p, $inc: { revision: 1 } }, { new: true },
+  );
+  if (!assessment) throw new ApiError(409, "This assessment changed or is locked. Reload before editing.");
+  res.json(assessment);
+}
+export async function remove(req, res) {
+  await mongoose.connection.transaction(async (session) => {
+    // Deletion and starting an assessment contend on the same document.
+    const assessment = await Assessment.findOneAndDelete({
       _id: req.params.id,
       createdBy: req.user.id,
       status: { $in: ["DRAFT", "SCHEDULED"] },
-    },
-    { $set: p, $inc: { revision: 1 } },
-    { new: true },
-  );
-  if (!a)
-    throw new ApiError(
-      409,
-      "Only drafts and scheduled assessments can be edited",
-    );
-  res.json(a);
+    }).session(session);
+    if (!assessment) {
+      await ownAssessment(req.params.id, req.user, session);
+      throw new ApiError(409, "Only draft and scheduled assessments can be deleted.");
+    }
+    if (await Attempt.exists({ assessment: assessment._id }).session(session))
+      throw new ApiError(409, "An assessment with student attempts cannot be deleted.");
+    await AssessmentStudent.deleteMany({ assessment: assessment._id }).session(session);
+  });
+  res.status(204).end();
 }
 export async function assign(req, res) {
   const body = z
@@ -156,18 +188,25 @@ export async function assignments(req, res) {
   );
 }
 export async function accessCode(req, res) {
-  const code = randomBytes(9).toString("base64url");
-  const hash = await bcrypt.hash(code, 12);
-  const a = await Assessment.findOneAndUpdate(
-    {
-      _id: req.params.id,
-      createdBy: req.user.id,
-      status: { $in: ["DRAFT", "SCHEDULED"] },
-    },
-    { $set: { accessCodeHash: hash } },
-  );
-  if (!a) throw new ApiError(409, "Generate access code before starting");
-  res.json({ accessCode: code, assessmentId: a._id });
+  await Assessment.init();
+  const previous = await Assessment.findOne({ _id: req.params.id, createdBy: req.user.id, status: { $in: ["DRAFT", "SCHEDULED", "LIVE"] } }).select("+accessCodeKey");
+  if (!previous) throw new ApiError(409, "Codes can only be generated for draft, scheduled or live assessments");
+  for (let retry = 0; retry < 5; retry++) {
+    const code = generateAssessmentCode();
+    if (assessmentCodeKey(code) === previous.accessCodeKey) continue;
+    const hash = await bcrypt.hash(code, 12);
+    try {
+      const a = await Assessment.findOneAndUpdate(
+        { _id: req.params.id, createdBy: req.user.id, status: { $in: ["DRAFT", "SCHEDULED", "LIVE"] } },
+        { $set: { accessCodeHash: hash, accessCodeKey: assessmentCodeKey(code) } },
+      );
+      if (!a) throw new ApiError(409, "Codes can only be generated for draft, scheduled or live assessments");
+      return res.json({ accessCode: code });
+    } catch (error) {
+      if (error.code !== 11000 || !error.keyPattern?.accessCodeKey) throw error;
+    }
+  }
+  throw new ApiError(503, "Could not generate a unique code. Please try again.");
 }
 export async function start(req, res) {
   let a;
@@ -177,9 +216,9 @@ export async function start(req, res) {
       !["DRAFT", "SCHEDULED"].includes(a.status) ||
       !a.questions.length ||
       !(await Assessment.findById(a._id)
-        .select("+accessCodeHash")
+        .select("+accessCodeHash +accessCodeKey")
         .session(session)
-        .then((x) => x.accessCodeHash)) ||
+        .then((x) => x.accessCodeHash && x.accessCodeKey)) ||
       !(await AssessmentStudent.exists({ assessment: a._id }).session(session))
     )
       throw new ApiError(
@@ -191,6 +230,8 @@ export async function start(req, res) {
     if (a.endTime && a.endTime <= new Date())
       throw new ApiError(409, "End time has passed");
     a.status = "LIVE";
+    a.startedAt = a.startTime || new Date();
+    a.closesAt = new Date(Math.min(+a.startedAt + a.duration * 60000, a.endTime ? +a.endTime : Infinity));
     a.revision++;
     await a.save({ session });
   });
@@ -204,6 +245,8 @@ export async function end(req, res) {
     a = await ownAssessment(req.params.id, req.user, session);
     if (a.status !== "LIVE") throw new ApiError(409, "Assessment is not live");
     a.status = "ENDED";
+    a.endedAt = new Date();
+    a.endReason = "TEACHER";
     a.revision++;
     await a.save({ session });
     const ts = await Attempt.find({

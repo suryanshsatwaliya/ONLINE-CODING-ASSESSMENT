@@ -15,6 +15,7 @@ export default function CodingQuestion({
   onChange,
   attemptId,
   flush,
+  preview = false,
 }) {
   const language = value?.language || q.supportedLanguages[0],
     code = value?.code ?? q.starterCode[language] ?? "";
@@ -42,6 +43,10 @@ export default function CodingQuestion({
     return () => clearInterval(t);
   }, [job]);
   async function run(submit) {
+    if (preview) {
+      E("This is an interface preview. Code execution is available during a real assessment.");
+      return;
+    }
     B(true);
     E("");
     R(null);

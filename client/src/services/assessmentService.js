@@ -4,4 +4,5 @@ export const assessmentService = {
   get: (id) => api.get("/assessments/" + id),
   create: (data) => api.post("/assessments", data),
   update: (id, data) => api.put("/assessments/" + id, data),
+  remove: (id) => api.delete("/assessments/" + id),
 };

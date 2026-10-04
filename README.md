@@ -8,10 +8,10 @@ A JavaScript full-stack assessment application with separate teacher and student
 
 - Responsive React landing page with Student and Teacher login cards; SaaS-style teacher workspace.
 - Teacher email/password login with bcrypt and scoped JWT authorization.
-- Student UID lookup, identity confirmation, assigned assessment ID and hashed access code verification.
+- Student UID and one six-character uppercase alphanumeric assessment code, with assignment checks and hashed code verification.
 - Student CRUD, activation/deactivation, search and course/section/status filtering.
 - Question bank with single choice, multiple select, true/false, exact-match short answer, and coding questions.
-- Manual question authoring, reusable bank snapshots, external problem reference fields without scraping.
+- Multi-question quiz/coding authoring, reusable bank snapshots, and public LeetCode problem import by number (public examples only; add your own hidden grading tests).
 - Draft/scheduled/live/ended assessments, question ordering, randomization, student/course/section assignment, manual start/end and publication controls.
 - Server-owned attempts, persisted randomized order, expiry times, autosave, review marks, submission and deterministic grading.
 - Fullscreen/visibility/focus/clipboard monitoring; configurable rules, transactional warning increments, event idempotency and related-transition deduplication.
@@ -164,13 +164,13 @@ If Vite chooses another port because 5173 is occupied, free the port or update `
 
 1. Choose **Teacher Login** and use the seed email/password.
 2. In **Students**, add your own UID/name/course/section or use the sample student. Ensure status is ACTIVE.
-3. In **Question Bank**, create questions. Correct option indexes are managed by radio/checkbox controls. For short answers, grading is case-insensitive exact match after trimming.
-4. In **Assessments → Create assessment**, fill details and choose questions. Use QUIZ if you do not yet have a code runner.
+3. In **Question Bank → Create Question**, choose **Quiz (MCQ)** or **Coding**. Add a title and multiple questions, then save the reusable set. Coding supports manual entry or import by a reference such as **LeetCode 67**, including public examples and explanations. Private judging tests are unavailable; add your own hidden tests before using a coding set in an assessment. See [authoring details](docs/AUTHORING.md).
+4. In **Assessments → Create Assessment**, enter a title, choose Quiz/Coding/Mixed, and select saved question sets. Configure duration, scheduling and security here. Existing individual questions also remain selectable. Use Quiz if you do not yet have a code runner.
 5. Save. In the assignment section, select individual students or a course/section and click **Save assignment**.
-6. Click **Generate / rotate access code**. Copy the displayed code now; only a bcrypt hash is stored. Also copy the assessment ID displayed above.
+6. In **Student access**, click **Generate new code** and **Copy code**. The code contains six uppercase letters and digits. Copy it before leaving; a replacement invalidates the previous code for new sign-ins.
 7. If students should enter the lobby before you start, save status as SCHEDULED. An optional start time is the earliest teacher start time; tests do not start automatically.
-8. Share the ID/code with the assigned students through your normal secure channel. Click **Start assessment** when ready.
-9. Open an incognito/private browser window for the student, keeping the teacher session separate. Verify the UID, confirm identity, enter the assessment ID/code and enter the lobby.
+8. Share the code with the assigned students through your normal secure channel. Click **Start assessment** when ready.
+9. Open an incognito/private browser window for the student, keeping the teacher session separate. Enter the student UID and assessment code, then click **Join assessment**. No assessment ID is needed.
 10. Accept the instructions and press **Start / resume assessment**. Grant fullscreen if configured.
 11. Answer questions. Watch Saving/Saved. In the teacher window, inspect **Live Monitor**.
 12. Try a configured clipboard or tab-change rule. Warning counts and events should appear on the server and in the monitor. Related focus/visibility/fullscreen events within two seconds count once.
@@ -296,3 +296,4 @@ npm run preview
 The application enforces authorization, ownership, attempt state, deadlines and grading on the server. It cannot block OS application switching, reliably detect arbitrary extensions, globally disable the clipboard, prevent screenshots, or guarantee that browser telemetry is genuine. Fullscreen and clipboard prevention are confined to browser APIs. No clipboard contents are collected.
 
 Read [docs/SECURITY.md](docs/SECURITY.md), [docs/PROCTORING.md](docs/PROCTORING.md), and [docs/TESTING.md](docs/TESTING.md) before real use.
+

@@ -37,7 +37,7 @@ export const securitySchema = z.object({
       RECONNECTED: "LOG",
     }),
 });
-export const questionSchema = z
+const questionFields = z
   .object({
     title: z.string().min(1).max(200),
     question: text.default(""),
@@ -55,7 +55,7 @@ export const questionSchema = z
     inputFormat: text.default(""),
     outputFormat: text.default(""),
     examples: z
-      .array(z.object({ input: text, output: text }))
+      .array(z.object({ input: text, output: text, explanation: text.default("") }))
       .max(20)
       .default([]),
     starterCode: z.record(z.string().max(50000)).default({}),
@@ -80,8 +80,8 @@ export const questionSchema = z
     tags: z.array(z.string().max(50)).max(20).default([]),
     qualityMarks: z.number().min(0).max(100).default(0),
     efficiencyMarks: z.number().min(0).max(100).default(0),
-  })
-  .superRefine((q, ctx) => {
+  });
+function validateQuestion(q, ctx, requireHidden = true) {
     const err = (m) => ctx.addIssue({ code: "custom", message: m });
     if (["SINGLE", "MULTIPLE", "TRUE_FALSE"].includes(q.type)) {
       if (
@@ -102,10 +102,30 @@ export const questionSchema = z
       err("Short answer needs a reference answer");
     if (
       q.type === "CODING" &&
-      (!q.testCases.some((t) => t.hidden) || !q.supportedLanguages.length)
+      ((requireHidden && !q.testCases.some((t) => t.hidden)) || !q.supportedLanguages.length)
     )
       err("Coding questions require hidden tests and a language");
+}
+export const questionSchema = questionFields.superRefine(validateQuestion);
+export const bankQuestionSchema = questionFields.superRefine((q, ctx) => {
+  validateQuestion(q, ctx, false);
+  if (!q.title.trim() || !(q.type === "CODING" ? q.description : q.question).trim())
+    ctx.addIssue({ code: "custom", message: "Enter the question text or problem statement" });
+  if (q.type !== "CODING" && q.type !== "SHORT" && q.options.some((option) => !option.trim()))
+    ctx.addIssue({ code: "custom", message: "Answer options cannot be empty" });
+});
+export const questionSetSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: text.default(""),
+  type: z.enum(["QUIZ", "CODING"]),
+  questions: z.array(bankQuestionSchema).min(1).max(100),
+  revision: z.number().int().min(0).optional(),
+}).superRefine((set, ctx) => {
+  set.questions.forEach((q, index) => {
+    if (set.type === "CODING" ? q.type !== "CODING" : !["SINGLE", "MULTIPLE", "TRUE_FALSE"].includes(q.type))
+      ctx.addIssue({ code: "custom", path: ["questions", index], message: "Question type does not match this set" });
   });
+});
 export const assessmentSchema = z
   .object({
     title: z.string().min(1).max(200),
@@ -120,6 +140,8 @@ export const assessmentSchema = z
       .array(z.string().regex(/^[a-f0-9]{24}$/i))
       .max(100)
       .default([]),
+    questionSetIds: z.array(z.string().regex(/^[a-f0-9]{24}$/i)).max(100).default([]),
+    newQuestions: z.never().optional(),
     securitySettings: securitySchema.default({}),
     randomizeQuestions: z.boolean().default(false),
     randomizeOptions: z.boolean().default(false),
@@ -132,4 +154,8 @@ export const assessmentSchema = z
     (a) =>
       !a.startTime || !a.endTime || new Date(a.endTime) > new Date(a.startTime),
     "End time must follow start time",
+  )
+  .refine(
+    (a) => new Set(a.questionSetIds).size === a.questionSetIds.length,
+    "A question set can only be selected once",
   );

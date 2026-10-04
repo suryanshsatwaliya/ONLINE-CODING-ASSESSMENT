@@ -6,7 +6,7 @@ export default function MCQQuestion({
 }) {
   return (
     <div className="options">
-      {(order || q.options.map((_, i) => i)).map((i) => (
+      {(order || q.options.map((_, i) => i)).map((i, position) => (
         <label
           className={"answer-option " + (value.includes(i) ? "selected" : "")}
           key={i}
@@ -25,7 +25,8 @@ export default function MCQQuestion({
               )
             }
           />
-          <span>{q.options[i]}</span>
+          <span className="em-option-letter" aria-hidden="true">{String.fromCharCode(65 + position)}</span>
+          <span className="em-option-text">{q.options[i]}</span>
         </label>
       ))}
     </div>

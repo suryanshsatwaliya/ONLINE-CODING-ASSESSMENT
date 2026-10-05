@@ -1,3 +1,4 @@
+import { useTheme } from "../../context/ThemeContext";
 import { Flag, ShieldCheck, RotateCcw, ListChecks, Code2 } from "lucide-react";
 import { examSections } from "../../utils/examSections";
 import { ModernExamHeader, ModernExamProgress, hasAnswer } from "./ModernExamChrome";
@@ -8,6 +9,7 @@ import Button from "../common/Button";
 import "../../exam-modern.css";
 
 export default function ExamWorkspace({ assessment: a, attempt: t, name, seconds, connected, answers, current, onNavigate, change, status, attemptId, flush, onSubmit, fullscreen = true, onFullscreen, error, children, preview = false }) {
+  const { theme } = useTheme();
   const q = a.questions[current], answer = answers[q?._id];
   const answered = a.questions.filter((q) => hasAnswer(answers[q._id]?.value)).length;
   const marked = a.questions.filter((q) => answers[q._id]?.marked).length;
@@ -18,7 +20,7 @@ export default function ExamWorkspace({ assessment: a, attempt: t, name, seconds
   const position = orderedIndexes.indexOf(current);
   const nextIndex = orderedIndexes[position + 1];
   const nextSection = sections.find((item) => item.indexes.includes(nextIndex));
-  return <div className="exam exam-modern">
+  return <div className="exam exam-modern" data-theme={theme}>
         <ModernExamHeader {...{ a, t, name, seconds, connected, onSubmit }} />
         {a.securitySettings.requireFullscreen && !fullscreen && (
           <div className="fullscreen-bar">
@@ -56,6 +58,7 @@ export default function ExamWorkspace({ assessment: a, attempt: t, name, seconds
                 </div>
                 {q.type === "CODING" ? (
                   <CodingQuestion
+                    theme={theme}
                     preview={preview}
                     key={q._id}
                     question={q}

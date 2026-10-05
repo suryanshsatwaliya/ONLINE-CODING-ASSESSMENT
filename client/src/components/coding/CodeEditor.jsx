@@ -1,14 +1,16 @@
 import Editor, { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+import { useTheme } from "../../context/ThemeContext";
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 loader.config({ monaco });
-export default function CodeEditor({ language, value, onChange }) {
+export default function CodeEditor({ language, value, onChange, theme }) {
+  const { theme: portalTheme } = useTheme();
   return (
     <Editor
       height="420px"
       language={language === "cpp" || language === "c" ? "cpp" : language}
-      theme="vs-dark"
+      theme={(theme ?? portalTheme) === "dark" ? "vs-dark" : "light"}
       value={value}
       onChange={(v) => onChange(v || "")}
       options={{

@@ -1,0 +1,61 @@
+/* Shared portal palette. Exam-specific states live in exam-modern.css. */
+:root { --surface:#fff; --surface-soft:#f3f4fa; --page:#f6f8fc; --ink:#18243b; --muted:#69748a; --line:#dfe4ee; --accent:#6558ca; --accent-soft:#efedff; color-scheme:light; }
+:root[data-theme="dark"] { --surface:#1a2132; --surface-soft:#252e42; --page:#101521; --ink:#e7eaf5; --muted:#a9b4ca; --line:#364159; --accent:#c2b5ff; --accent-soft:#30294d; color-scheme:dark; background:var(--page); color:var(--ink); }
+.theme-toggle { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:7px 10px; min-height:34px; border:1px solid var(--line); background:var(--surface); border-radius:9px; color:var(--accent); font-size:11px; flex-shrink:0; }
+.theme-toggle:hover { border-color:var(--accent); }
+.theme-toggle:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.theme-track { display:flex; align-items:center; width:30px; height:18px; padding:3px; border-radius:12px; background:#dfe1eb; }
+.theme-track > span { width:12px; height:12px; background:white; border-radius:50%; transition:transform .2s ease; }
+.theme-toggle[aria-checked="true"] .theme-track { background:#8271ed; }
+.theme-toggle[aria-checked="true"] .theme-track > span { transform:translateX(12px); }
+.navbar-actions { display:flex; align-items:center; gap:22px; }
+@media(max-width:680px) { .navbar-actions > .eyebrow { display:none; } .navbar { padding-inline:20px; } .workspace-header { gap:12px; height:auto; min-height:84px; padding-block:12px; flex-wrap:wrap; } .workspace-header > .row { gap:10px; flex-wrap:wrap; } }
+@media(prefers-reduced-motion:reduce) { .theme-track > span { transition:none; } }
+
+/* Common surfaces and controls, used by both teacher and student pages. */
+html[data-theme="dark"] body { background:var(--page); color:var(--ink); }
+html[data-theme="dark"] :is(.card,.sidebar,.modal,.portal-card,.set-save-bar,.assessment-menu-options,.assessment-question-editor,.entry-form,.assessment-access,.ah-metric,.ah-search,.ah-assessment-card,.as-steps,.as-panel,.as-summary) { background:var(--surface); border-color:var(--line); }
+html[data-theme="dark"] .workspace-header { background:#1a2132e6; border-color:var(--line); }
+html[data-theme="dark"] .landing { background:radial-gradient(ellipse at 50% 32%,#55449a24,transparent 55%),var(--page); }
+html[data-theme="dark"] .portal-card.teacher { background:#292540; border-color:#50466d; }
+html[data-theme="dark"] :is(p,small,.muted,.eyebrow,.field,.check,.empty,th,td,.nav-label,.sidebar nav a,.sidebar-footer button,.feature-strip,.landing footer,.stat .row,.stat > span,.stat small,.set-save-bar > span,.question-extra,.auth-card > a) { color:var(--muted); }
+html[data-theme="dark"] :is(td strong,.entry-welcome h1,.entry-form h2,.entry-how strong,.entry-help strong,.as-type-grid strong,.as-subheading h3,.as-option-stack strong,.as-summary-numbers strong,.as-student-list strong,.ah-metric > strong) { color:var(--ink); }
+html[data-theme="dark"] :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { background:var(--surface-soft); border-color:var(--line); color:var(--ink); }
+html[data-theme="dark"] :is(input,textarea)::placeholder { color:#95a0b7; opacity:1; }
+html[data-theme="dark"] :is(input,select,textarea):focus { outline-color:#7764c280; border-color:#a797ef; }
+html[data-theme="dark"] button { color:var(--accent); }
+html[data-theme="dark"] .btn { color:#fff; }
+html[data-theme="dark"] .btn.secondary { background:var(--surface-soft); color:var(--ink); border-color:var(--line); }
+html[data-theme="dark"] .btn.secondary:hover { background:#333c53; }
+html[data-theme="dark"] :is(.pill,.switch,.existing-question-picker,.console,.as-summary-tip,.as-security-note) { background:var(--surface-soft); border-color:var(--line); color:var(--muted); }
+html[data-theme="dark"] :is(pre,.test-builder) { border-color:var(--line); }
+html[data-theme="dark"] :is(.badge,.ah-status,.as-draft-label) { background:var(--surface-soft); color:var(--muted); }
+html[data-theme="dark"] :is(.avatar,.portal-icon,.question-number,.entry-form-icon,.ah-type-icon,.ah-empty-icon,.timer,.ah-library-heading h2 > span,.notice,.leetcode-import,.access-code-panel) { background:var(--accent-soft); color:var(--accent); border-color:#4b416d; }
+html[data-theme="dark"] :is(.sidebar nav a.active,.badge.scheduled,.badge.coding,.saved-set-option.selected,.quiz-option.is-correct,.as-type-grid label.selected) { background:var(--accent-soft); color:var(--accent); border-color:#74629f; }
+html[data-theme="dark"] :is(.badge.live,.badge.active,.badge.submitted,.badge.done,.badge.graded,.status-live,.type-coding,.success-symbol,.as-review-banner) { background:#1d3b35; color:#86d9b9; border-color:#386451; }
+html[data-theme="dark"] :is(.status-scheduled,.type-mixed,.warning-symbol,.fullscreen-bar) { background:#423522; color:#f0c984; }
+html[data-theme="dark"] .status-ended { background:#27364f; color:#b0c8ed; }
+html[data-theme="dark"] :is(.error,.badge.terminated,.badge.error,.badge.disconnected,.timer.urgent) { background:#452932; color:#ffc0cc; }
+html[data-theme="dark"] :is(.danger-text,.assessment-delete-trigger) { color:#ffb5c0; }
+html[data-theme="dark"] .assessment-delete-trigger { background:#322633; border-color:#694350; }
+html[data-theme="dark"] .assessment-delete-trigger:hover { background:#452932; }
+html[data-theme="dark"] :is(.list-row,th,td,.portal-link,.landing footer,.quiz-option,.saved-set-option,.question-editor-heading,.question-select,.timeline > div,.entry-footnote,.entry-help,.as-disclosure,.as-option-stack > label,.as-step-footer,.as-summary-numbers,.as-review-sets > div,.as-student-list label,.ah-library,.ah-tabs,.ah-card-footer,details) { border-color:var(--line); }
+html[data-theme="dark"] :is(.hero h1 > span,.entry-welcome h1 span,.entry-eyebrow,.entry-code-input,.access-code-display.ready,.result-score,.lobby-countdown strong,.bank-set-card a,.back-link,.source-reference a,.as-back,.ah-kicker,.ah-card-footer strong) { color:var(--accent); }
+html[data-theme="dark"] :is(.question-tools button:hover,.assessment-menu-options > a:hover,.assessment-menu-options > a:focus-visible) { background:var(--accent-soft); }
+html[data-theme="dark"] .entry-how > span { background:var(--surface); color:var(--accent); border-color:var(--line); }
+html[data-theme="dark"] .entry-form .entry-code-input { background:var(--accent-soft); color:var(--accent); }
+html[data-theme="dark"] :is(.entry-back,.entry-welcome > p,.entry-how p,.entry-footnote,.entry-form > p,.entry-form .field,.entry-form .entry-code-hint,.entry-help p,.access-explainer p,.access-explainer ol,.access-code-panel p,.access-code-panel small) { color:var(--muted); }
+html[data-theme="dark"] .overlay { background:#050914bd; }
+
+/* Assessment library and the complete authoring wizard. */
+html[data-theme="dark"] :is(.assessment-hub,.assessment-setup) { --studio-ink:var(--ink); --studio-line:var(--line); --studio-purple:var(--accent); }
+html[data-theme="dark"] .assessment-hub .ah-create { background:#6555d9; color:white; }
+html[data-theme="dark"] .ah-metric.active { background:#29253e; border-color:#9682d4; }
+html[data-theme="dark"] :is(.ah-metric,.ah-heading h1 span,.ah-heading p,.ah-metric > small,.ah-library-heading p,.ah-library-heading > a,.ah-tabs button,.ah-toolbar select,.ah-card-type,.ah-card-description,.ah-card-meta,.ah-card-footer > span,.ah-result-count,.as-heading p,.as-steps button,.as-section-number,.as-panel-heading p,.assessment-setup .field,.as-optional,.as-type-selector legend,.as-type-grid small,.as-disclosure > summary,.as-disclosure > summary > span,.as-security-note p,.as-security-note strong,.as-option-stack small,.as-step-footer > span,.as-summary > p,.as-summary-numbers small,.as-summary li,.as-summary-tip strong,.as-summary-tip p,.as-review-sets > div,.as-help) { color:var(--muted); }
+html[data-theme="dark"] :is(.as-type-grid label,.assessment-setup .field input,.assessment-setup .field textarea,.assessment-setup .field select) { border-color:var(--line); }
+html[data-theme="dark"] :is(.ah-tabs button span,.as-steps button > span) { background:var(--surface-soft); }
+html[data-theme="dark"] :is(.ah-tabs button.active,.as-steps .active,.as-steps .complete) { color:var(--accent); }
+html[data-theme="dark"] :is(.ah-tabs button.active span,.as-steps .complete > span) { background:var(--accent-soft); }
+html[data-theme="dark"] .as-steps .active > span { background:#7961d1; color:white; }
+html[data-theme="dark"] .ah-empty { background:var(--surface); border-color:var(--line); }
+html[data-theme="dark"] :is(.as-review-banner strong,.as-review-banner span) { color:#a0d7b9; }

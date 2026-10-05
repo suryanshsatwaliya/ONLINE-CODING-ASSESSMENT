@@ -1,4 +1,5 @@
 import { useAuth } from "../../hooks/useAuth";
+import ThemeToggle from "../common/ThemeToggle";
 export default function Header() {
   const { user } = useAuth();
   return (
@@ -7,6 +8,7 @@ export default function Header() {
         Assessment workspace <span className="muted">/ Teacher</span>
       </span>
       <div className="row">
+        <ThemeToggle />
         <span className="avatar">{user?.name?.[0]}</span>
         <div>
           <strong>{user?.name}</strong>

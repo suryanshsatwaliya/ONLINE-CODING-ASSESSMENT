@@ -1,5 +1,6 @@
 import { ShieldCheck, Clock3, Flag, Check, CheckCircle2, Wifi, WifiOff } from "lucide-react";
 import Timer from "./Timer";
+import ThemeToggle from "../common/ThemeToggle";
 import QuestionNavigator from "./QuestionNavigator";
 export function hasAnswer(value) {
   if (Array.isArray(value)) return value.length > 0;
@@ -13,7 +14,7 @@ export function ModernExamHeader({ a, t, name, seconds, connected, onSubmit }) {
       <div className={`em-clock ${seconds < 60 ? "is-urgent" : ""}`} role="timer" aria-label="Time remaining"><Clock3 size={19} /><div><span>TIME REMAINING</span><Timer seconds={seconds} /></div></div>
       <div className="em-header-actions"><span className="em-student"><span>{name?.trim().charAt(0) || "S"}</span>{name}</span><button className="btn em-submit" onClick={onSubmit}>Submit assessment <Check size={16} /></button></div>
     </header>
-    <div className="em-statusbar"><div className="em-session-status"><span className={connected ? "em-connected" : "em-disconnected"}>{connected ? <Wifi size={14} /> : <WifiOff size={14} />}{connected ? "Connected" : "Connection lost"}</span><span><ShieldCheck size={14} /> Warnings <strong>{t.warningCount} / {a.securitySettings.maxWarnings}</strong></span></div></div>
+    <div className="em-statusbar"><div className="em-session-status"><span className={connected ? "em-connected" : "em-disconnected"}>{connected ? <Wifi size={14} /> : <WifiOff size={14} />}{connected ? "Connected" : "Connection lost"}</span><span><ShieldCheck size={14} /> Warnings <strong>{t.warningCount} / {a.securitySettings.maxWarnings}</strong></span></div><ThemeToggle /></div>
   </>;
 }
 export function ModernExamProgress({ a, answers, current, onNavigate, status, answered, marked, sections }) {

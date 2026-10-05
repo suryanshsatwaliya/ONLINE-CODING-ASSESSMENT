@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
+import ThemeToggle from "../common/ThemeToggle";
 export default function Navbar() {
   return (
     <nav className="navbar">
@@ -9,7 +10,7 @@ export default function Navbar() {
         </span>
         Assess<span className="muted"> / Portal</span>
       </Link>
-      <span className="eyebrow">LEARN. ASSESS. GROW.</span>
+      <div className="navbar-actions"><span className="eyebrow">LEARN. ASSESS. GROW.</span><ThemeToggle /></div>
     </nav>
   );
 }

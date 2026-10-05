@@ -16,6 +16,7 @@ export default function CodingQuestion({
   attemptId,
   flush,
   preview = false,
+  theme = "dark",
 }) {
   const language = value?.language || q.supportedLanguages[0],
     code = value?.code ?? q.starterCode[language] ?? "";
@@ -83,6 +84,7 @@ export default function CodingQuestion({
         </div>
         <Suspense fallback={<p>Loading code editor…</p>}>
           <CodeEditor
+            theme={theme}
             language={language}
             value={code}
             onChange={(code) => onChange({ language, code })}

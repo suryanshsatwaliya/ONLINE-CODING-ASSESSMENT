@@ -3,7 +3,7 @@ import { api, errorMessage } from "../../services/api";
 import Input from "../common/Input";
 import Button from "../common/Button";
 
-export default function LeetcodeImport({ value, onChange, onBusy }) {
+export default function LeetcodeImport({ value, onChange, onBusy, onImported }) {
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -18,6 +18,7 @@ export default function LeetcodeImport({ value, onChange, onBusy }) {
     try {
       const { data } = await api.post("/questions/import/leetcode", { reference });
       onChange({ ...value, ...data.question });
+      onImported?.(data.question);
       setWarnings(data.warnings || []);
     } catch (e) {
       setError(errorMessage(e));

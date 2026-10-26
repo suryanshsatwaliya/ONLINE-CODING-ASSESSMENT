@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, ClipboardList, Radio, CalendarDays, FileEdit, ArrowUpRight, Layers3 } from "lucide-react";
 import { assessmentService } from "../../services/assessmentService";
 import { errorMessage } from "../../services/api";
 import AssessmentCard from "../../components/teacher/AssessmentCard";
+import ReuseAssessmentModal from "../../components/teacher/ReuseAssessmentModal";
 import { useAssessmentUpdates } from "../../hooks/useAssessmentUpdates";
 
 const statuses = [["ALL", "All assessments"], ["DRAFT", "Drafts"], ["SCHEDULED", "Scheduled"], ["LIVE", "Live"], ["ENDED", "Completed"]];
 export default function Assessments() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]), [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL"), [type, setType] = useState("ALL"), [sort, setSort] = useState("recent");
   const [loading, setLoading] = useState(true), [error, setError] = useState("");
+  const [reuseId, setReuseId] = useState(null);
   async function load() {
     setLoading(true); setError("");
     try { setRows((await assessmentService.list()).data); }
@@ -48,12 +51,18 @@ export default function Assessments() {
           <select aria-label="Sort assessments" value={sort} onChange={(e) => setSort(e.target.value)}><option value="recent">Newest first</option><option value="title">Title A–Z</option><option value="duration">Shortest duration</option></select>
         </div>
         {error ? <div className="ah-empty" role="alert"><p>{error}</p><button className="btn secondary" onClick={load}>Try again</button></div> : loading ? <div className="ah-empty" role="status">Loading your assessments…</div> : visible.length ? <>
-          <div className="ah-cards">{visible.map((a) => <AssessmentCard key={a._id} assessment={a} onDeleted={(id) => setRows((previous) => previous.filter((item) => item._id !== id))} />)}</div>
+          <div className="ah-cards">{visible.map((a) => <AssessmentCard key={a._id} assessment={a} onReuse={setReuseId} onDeleted={(id) => setRows((previous) => previous.filter((item) => item._id !== id))} />)}</div>
           <p className="ah-result-count">Showing {visible.length} of {rows.length} assessments</p>
         </> : <div className="ah-empty"><span className="ah-empty-icon"><ClipboardList size={30} /></span><h3>{rows.length ? "No matching assessments" : "Your next assessment starts here"}</h3><p>{rows.length ? "Try another search or clear your filters." : "Choose saved questions and create your first assessment in a few simple steps."}</p>
           {rows.length ? <button className="btn secondary" onClick={() => { setSearch(""); setType("ALL"); setStatus("ALL"); }}>Clear filters</button> : <Link className="btn" to="/teacher/assessments/new"><Plus size={17} /> Create assessment</Link>}
         </div>}
       </section>
+      {reuseId && <ReuseAssessmentModal assessmentId={reuseId} onClose={() => setReuseId(null)} onCreated={async (newId) => {
+        setReuseId(null);
+        try { setRows((await assessmentService.list()).data); }
+        catch (e) { setError(errorMessage(e)); }
+        navigate(`/teacher/assessments/${newId}`);
+      }} />}
     </div>
   );
 }

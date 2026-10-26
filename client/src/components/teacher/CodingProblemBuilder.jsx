@@ -1,6 +1,16 @@
+import { useEffect, useState } from "react";
 import Input from "../common/Input";
 export default function CodingProblemBuilder({ value: q, onChange }) {
   const set = (k, v) => onChange({ ...q, [k]: v });
+  const languages = ["python", "javascript", "cpp", "java", "c"];
+  const labels = { python: "Python", javascript: "JavaScript", cpp: "C++", java: "Java", c: "C" };
+  const [activeLanguage, setActiveLanguage] = useState(() =>
+    q.supportedLanguages.includes("python") ? "python" : q.supportedLanguages[0] || "python",
+  );
+  useEffect(() => {
+    if (q.externalReference)
+      setActiveLanguage(q.supportedLanguages.includes("python") ? "python" : q.supportedLanguages[0] || "python");
+  }, [q.externalReference]);
   return (
     <>
       <div className="coding-statement-fields">
@@ -50,33 +60,50 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
         />
       </div>
       <h3>Languages & starter code</h3>
-      {["c", "cpp", "java", "python", "javascript"].map((l) => (
-        <details key={l}>
-          <summary>{l}</summary>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={q.supportedLanguages.includes(l)}
-              onChange={(e) =>
-                set(
-                  "supportedLanguages",
-                  e.target.checked
-                    ? [...q.supportedLanguages, l]
-                    : q.supportedLanguages.filter((x) => x !== l),
-                )
-              }
-            />
-            Enabled
-          </label>
+      <div className="coding-language-editor">
+        <div className="coding-language-tabs" aria-label="Starter code language">
+          {languages.map((language) => {
+            const enabled = q.supportedLanguages.includes(language);
+            return (
+              <div className={`coding-language-option ${activeLanguage === language ? "active" : ""}`} key={language}>
+                <button
+                  type="button"
+                  className="coding-language-tab"
+                  aria-pressed={activeLanguage === language}
+                  onClick={() => setActiveLanguage(language)}
+                >
+                  {labels[language]}
+                </button>
+                <label className="coding-language-toggle" title={`${enabled ? "Disable" : "Enable"} ${labels[language]}`}>
+                  <input
+                    type="checkbox"
+                    aria-label={`${enabled ? "Disable" : "Enable"} ${labels[language]}`}
+                    checked={enabled}
+                    onChange={(e) => set(
+                      "supportedLanguages",
+                      e.target.checked
+                        ? [...q.supportedLanguages, language]
+                        : q.supportedLanguages.filter((item) => item !== language),
+                    )}
+                  />
+                  <span aria-hidden="true" />
+                </label>
+              </div>
+            );
+          })}
+        </div>
+        <section className="coding-language-panel" aria-label={`${labels[activeLanguage]} starter code`}>
+          <div className="coding-language-panel-heading">
+            <strong>{labels[activeLanguage]} starter code</strong>
+          </div>
           <textarea
             className="code-input"
-            value={q.starterCode[l] || ""}
-            onChange={(e) =>
-              set("starterCode", { ...q.starterCode, [l]: e.target.value })
-            }
+            aria-label={`${labels[activeLanguage]} starter code`}
+            value={q.starterCode[activeLanguage] || ""}
+            onChange={(e) => set("starterCode", { ...q.starterCode, [activeLanguage]: e.target.value })}
           />
-        </details>
-      ))}
+        </section>
+      </div>
       </details>
       <h3>Examples</h3>
       {q.examples.map((t, i) => (

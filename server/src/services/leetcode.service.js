@@ -6,6 +6,7 @@ const query = `query questionData($titleSlug: String!) {
   question(titleSlug: $titleSlug) {
     questionFrontendId title titleSlug content difficulty isPaidOnly
     exampleTestcases metaData topicTags { name }
+    codeSnippets { lang langSlug code }
   }
 }`;
 
@@ -88,11 +89,26 @@ export function convertProblem(problem) {
   if (metadata.systemdesign || params.some((p) => !/^(?:integer|long|double|float|boolean|string|character)(?:\[\])*$/i.test(p.type || "")))
     warnings.push("This problem may use special data structures or a custom checker. Adapt the input/output format and starter code before using it.");
   const count = params.length;
-  const python = `import json\nimport sys\n\ndef solve(*args):\n    # TODO: implement the solution. Arguments are decoded JSON values.\n    raise NotImplementedError("Implement solve")\n\nargs = [json.loads(line) for line in sys.stdin.read().splitlines() if line.strip()]\nresult = solve(*args)\nprint(json.dumps(result, separators=(',', ':')))\n`;
-  const javascript = `const fs = require('fs');\n\nfunction solve(...args) {\n  // TODO: implement the solution. Arguments are decoded JSON values.\n  throw new Error('Implement solve');\n}\n\nconst args = fs.readFileSync(0, 'utf8').trim().split(/\\r?\\n/).filter(Boolean).map(JSON.parse);\nconsole.log(JSON.stringify(solve(...args)));\n`;
+  const languageBySlug = { c: "c", cpp: "cpp", java: "java", python: "python", python3: "python", javascript: "javascript" };
+  const starterCode = {};
+  for (const snippet of problem.codeSnippets || []) {
+    const language = languageBySlug[snippet.langSlug];
+    if (language && !starterCode[language] && typeof snippet.code === "string")
+      starterCode[language] = snippet.code;
+  }
+  const languageOrder = ["python", "javascript", "cpp", "java", "c"];
+  const supportedLanguages = languageOrder.filter((language) => starterCode[language]);
+  if (!supportedLanguages.length) {
+    starterCode.python = `import json\nimport sys\n\ndef solve(*args):\n    # TODO: implement the solution. Arguments are decoded JSON values.\n    raise NotImplementedError("Implement solve")\n\nargs = [json.loads(line) for line in sys.stdin.read().splitlines() if line.strip()]\nresult = solve(*args)\nprint(json.dumps(result, separators=(',', ':')))\n`;
+    starterCode.javascript = `const fs = require('fs');\n\nfunction solve(...args) {\n  // TODO: implement the solution. Arguments are decoded JSON values.\n  throw new Error('Implement solve');\n}\n\nconst args = fs.readFileSync(0, 'utf8').trim().split(/\\r?\\n/).filter(Boolean).map(JSON.parse);\nconsole.log(JSON.stringify(solve(...args)));\n`;
+    supportedLanguages.push("python", "javascript");
+    warnings.push("LeetCode starter templates were unavailable, so editable standard-input templates were added instead.");
+  } else {
+    warnings.push("LeetCode starter code is copied as provided. Review its method signature and adapt it to this portal’s standard-input runner before using it in an assessment.");
+  }
   return {
     question: {
-      title: `${problem.questionFrontendId}. ${problem.title}`.slice(0, 200),
+      title: String(problem.title || "").slice(0, 200),
       type: "CODING", source: "EXTERNAL",
       externalReference: `${origin}/problems/${problem.titleSlug}/`,
       description: content.slice(0, 20000),
@@ -105,8 +121,8 @@ export function convertProblem(problem) {
       outputFormat: "Print the result as compact JSON on one line, with no extra messages. String results must include double quotes. The runner compares output text; define one exact expected output for each test.",
       examples,
       testCases,
-      starterCode: { python, javascript },
-      supportedLanguages: ["python", "javascript"],
+      starterCode,
+      supportedLanguages,
     },
     warnings,
   };

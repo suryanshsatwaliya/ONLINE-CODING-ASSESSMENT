@@ -13,7 +13,7 @@ export default function ProblemDescription({ question: q }) {
           <p className="preserve">{v}</p>
         </section>
       ))}
-      {q.examples.map((x, i) => (
+      {(Array.isArray(q.examples) ? q.examples : []).map((x, i) => (
         <div className="sample" key={i}>
           <h3>Example {i + 1}</h3>
           <small>INPUT</small>

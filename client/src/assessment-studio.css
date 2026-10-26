@@ -151,7 +151,39 @@
 .question-picker-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .question-picker-toolbar .search { flex: 1; min-width: 160px; margin: 0; }
 .question-picker-toolbar .btn { flex-shrink: 0; }
+.coding-language-editor { margin: 14px 0 22px; }
+.coding-language-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 13px; }
+.coding-language-option { display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 12px; border: 1px solid var(--line, #dfe4ee); border-radius: 10px; background: var(--surface, #fff); transition: border-color .15s, background .15s; }
+.coding-language-option:hover { border-color: var(--accent, #6558ca); }
+.coding-language-option.active { border-color: var(--accent, #6558ca); background: var(--accent-soft, #efedff); }
+.coding-language-tabs .coding-language-tab { padding: 5px 0; background: transparent; color: var(--muted, #69748a); font-size: 12px; }
+.coding-language-option.active .coding-language-tab { color: var(--accent, #6558ca); }
+.coding-language-toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+.coding-language-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.coding-language-toggle > span { display: inline-flex; width: 32px; height: 18px; padding: 2px; border-radius: 20px; background: #cbd2df; transition: background .15s; }
+.coding-language-toggle > span::after { content: ""; width: 14px; height: 14px; border-radius: 50%; background: white; box-shadow: 0 1px 3px #18243b33; transition: transform .15s; }
+.coding-language-toggle input:checked + span { background: var(--accent, #6558ca); }
+.coding-language-toggle input:checked + span::after { transform: translateX(14px); }
+.coding-language-toggle input:focus-visible + span { outline: 2px solid var(--accent, #6558ca); outline-offset: 2px; }
+.coding-language-panel { padding: 15px; border: 1px solid var(--line, #dfe4ee); border-radius: 12px; background: var(--surface, #fff); }
+.coding-language-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.coding-language-panel-heading > strong { font-size: 13px; }
+.coding-language-panel .code-input { display: block; width: 100%; min-height: 260px; margin-top: 13px; resize: vertical; font-size: 12px; line-height: 1.55; }
 .ah-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+.ah-card-actions .ah-reuse-button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; font-size: 10px; white-space: nowrap; }
+.reuse-assessment-form { margin-top: 18px; }
+.reuse-assessment-help { color: #746982; font-size: 12px; line-height: 1.6; }
+.reuse-assessment-modal > .row { position: sticky; top: -28px; z-index: 3; margin: -28px -28px 18px; padding: 28px 28px 16px; background: var(--surface, #fff); }
+.reuse-assessment-modal > .row h2 { padding-right: 56px; }
+.reuse-assessment-modal > .row .icon-btn { position: absolute; top: 18px; right: 20px; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line, #dfe4ee); border-radius: 11px; background: var(--surface, #fff); color: var(--muted, #69748a); line-height: 1; box-shadow: 0 2px 7px #18243b0a; transition: border-color .16s, color .16s, background .16s; }
+.reuse-assessment-modal > .row .icon-btn:hover { border-color: var(--accent, #6558ca); color: var(--accent, #6558ca); background: var(--accent-soft, #efedff); }
+.reuse-assessment-modal > .row .icon-btn:focus-visible { outline: 2px solid var(--accent, #6558ca); outline-offset: 2px; }
+.reuse-section-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.reuse-student-actions { margin-top: 8px; }
+.reuse-student-actions > span { margin-left: auto; color: #746982; font-size: 11px; }
+.reuse-student-list { max-height: min(58vh, 540px); }
+.reuse-student-list label { padding-block: 8px; }
+@media (max-width: 640px) { .reuse-section-tools { grid-template-columns: 1fr; gap: 0; } .reuse-student-actions > span { margin-left: 0; } .coding-language-panel-heading { align-items: flex-start; flex-direction: column; gap: 10px; } }
 .assessment-delete-trigger { display: inline-flex; align-items: center; gap: 5px; color: #b3404e; border: 1px solid #f1dce0; border-radius: 8px; padding: 7px 9px; font-size: 11px; font-weight: 600; background: #fff; }
 .assessment-delete-trigger:hover { background: #fff2f3; border-color: #d89ca5; }
 .assessment-delete-trigger:focus-visible { outline: 2px solid #b3404e; outline-offset: 3px; }

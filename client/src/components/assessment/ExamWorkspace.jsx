@@ -1,5 +1,6 @@
+import { useEffect, useState } from "react";
 import { useTheme } from "../../context/ThemeContext";
-import { Flag, ShieldCheck, RotateCcw, ListChecks, Code2 } from "lucide-react";
+import { Flag, ShieldCheck, RotateCcw } from "lucide-react";
 import { examSections } from "../../utils/examSections";
 import { ModernExamHeader, ModernExamProgress, hasAnswer } from "./ModernExamChrome";
 import MCQQuestion from "./MCQQuestion";
@@ -10,6 +11,10 @@ import "../../exam-modern.css";
 
 export default function ExamWorkspace({ assessment: a, attempt: t, name, seconds, connected, answers, current, onNavigate, change, status, attemptId, flush, onSubmit, fullscreen = true, onFullscreen, error, children, preview = false }) {
   const { theme } = useTheme();
+  const [visitedQuestions, setVisitedQuestions] = useState(() => new Set([current]));
+  useEffect(() => {
+    setVisitedQuestions((visited) => new Set(visited).add(current));
+  }, [current]);
   const q = a.questions[current], answer = answers[q?._id];
   const answered = a.questions.filter((q) => hasAnswer(answers[q._id]?.value)).length;
   const marked = a.questions.filter((q) => answers[q._id]?.marked).length;
@@ -20,7 +25,7 @@ export default function ExamWorkspace({ assessment: a, attempt: t, name, seconds
   const position = orderedIndexes.indexOf(current);
   const nextIndex = orderedIndexes[position + 1];
   const nextSection = sections.find((item) => item.indexes.includes(nextIndex));
-  return <div className="exam exam-modern" data-theme={theme}>
+  return <div className={`exam exam-modern${preview ? " is-preview" : ""}`} data-theme={theme}>
         <ModernExamHeader {...{ a, t, name, seconds, connected, onSubmit }} />
         {a.securitySettings.requireFullscreen && !fullscreen && (
           <div className="fullscreen-bar">
@@ -32,18 +37,9 @@ export default function ExamWorkspace({ assessment: a, attempt: t, name, seconds
         )}
         <div className="exam-body">
           <aside className="exam-sidebar">
-            <ModernExamProgress {...{ a, answers, current, onNavigate, status, answered, marked, sections }} />
+            <ModernExamProgress {...{ a, answers, current, onNavigate, status, answered, marked, sections, visitedQuestions }} />
           </aside>
           <main className="exam-main">
-            {mixed && <nav className="em-section-tabs" aria-label="Assessment sections">
-              {sections.map((item) => {
-                const Icon = item.id === "coding" ? Code2 : ListChecks;
-                return <button type="button" key={item.id} aria-pressed={section?.id === item.id}
-                  onClick={() => section?.id !== item.id && onNavigate(item.indexes.find((i) => !hasAnswer(answers[a.questions[i]._id]?.value)) ?? item.indexes[0])}>
-                  <Icon size={18} /><span>{item.label}</span><small>{item.indexes.length} {item.indexes.length === 1 ? "question" : "questions"}</small>
-                </button>;
-              })}
-            </nav>}
             {q && (
               <>
                 <div className="row between">
@@ -109,10 +105,8 @@ export default function ExamWorkspace({ assessment: a, attempt: t, name, seconds
                             ? ""
                             : q.type === "CODING"
                               ? {
-                                  language: q.supportedLanguages[0],
-                                  code:
-                                    q.starterCode[q.supportedLanguages[0]] ||
-                                    "",
+                                  language: q.supportedLanguages?.[0] || "python",
+                                  code: q.starterCode?.[q.supportedLanguages?.[0] || "python"] || "",
                                 }
                               : []),
                         !answer?.marked,

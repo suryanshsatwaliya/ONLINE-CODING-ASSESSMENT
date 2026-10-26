@@ -23,10 +23,10 @@ export default function ExamPreview() {
     const id = assessment.questions[current]._id;
     setAnswers((old) => ({ ...old, [id]: { value, marked: marked ?? old[id]?.marked ?? false } }));
   }
-  return <>
+  return <div className="exam-preview-page">
     <div className="exam-preview-banner"><span><strong>INTERFACE PREVIEW</strong> · Try answers and question navigation. No real attempt is created.</span><Link to="/teacher/dashboard">Back to dashboard →</Link></div>
     <ExamWorkspace assessment={assessment} attempt={{ warningCount: 0, optionOrders: {} }} name="Alex Morgan" seconds={1425} connected answers={answers} current={current} onNavigate={setCurrent} change={change} status="Saved" flush={async () => {}} onSubmit={() => setReview(true)} preview>
       {review && <Modal title="Preview complete" onClose={() => setReview(false)}><p>In a real assessment, students confirm submission here before their saved answers are sent for grading. This preview does not submit anything.</p><Button onClick={() => setReview(false)}>Continue exploring</Button></Modal>}
     </ExamWorkspace>
-  </>;
+  </div>;
 }

@@ -101,6 +101,15 @@ export async function create(req, res) {
     ...(await payload(req.body, req.user)), createdBy: req.user.id,
   }));
 }
+export async function reuse(req, res) {
+  const source = await ownAssessment(req.params.id, req.user);
+  if (source.status !== "ENDED")
+    throw new ApiError(409, "Only completed assessments can be reused.");
+  res.status(201).json(await Assessment.create({
+    ...(await payload(req.body, req.user, source)),
+    createdBy: req.user.id,
+  }));
+}
 export async function update(req, res) {
   const previous = await ownAssessment(req.params.id, req.user);
   const p = await payload(req.body, req.user, previous);

@@ -38,15 +38,27 @@ export default function AssessmentQuestionPicker({ sets, bank, form, onChange, o
     };
   }, [refresh]);
   const allSets = availableSets(sets, form);
-  const compatible = allSets.filter((set) => form.type === "MIXED" || set.type === form.type);
-  const visible = compatible.filter((set) => set.title.toLowerCase().includes(search.toLowerCase()));
-  const individual = [...bank, ...(form.questions || []).filter((q) => !q.sourceSetId && !bank.some((item) => item._id === q._id))]
-    .filter((q) => form.type === "MIXED" || (form.type === "CODING" ? q.type === "CODING" : q.type !== "CODING"));
-  const toggle = (key, id, checked) => onChange({ ...form, [key]: checked ? [...form[key], id] : form[key].filter((item) => item !== id) });
+  const visible = allSets.filter((set) => set.title.toLowerCase().includes(search.toLowerCase()));
+  const individual = [...bank, ...(form.questions || []).filter((q) => !q.sourceSetId && !bank.some((item) => item._id === q._id))];
+  const toggle = (key, id, checked) => {
+    const next = {
+      ...form,
+      [key]: checked ? [...form[key], id] : form[key].filter((item) => item !== id),
+    };
+    const selectedSets = next.questionSetIds.map((setId) => allSets.find((set) => set._id === setId)).filter(Boolean);
+    const selectedQuestions = next.questionIds.map((questionId) => individual.find((question) => question._id === questionId)).filter(Boolean);
+    const types = [...selectedSets, ...selectedQuestions].map((item) => item.type);
+    const hasCoding = types.includes("CODING");
+    const hasQuiz = types.some((type) => type !== "CODING");
+    if (hasCoding && hasQuiz) next.type = "MIXED";
+    else if (hasCoding) next.type = "CODING";
+    else if (hasQuiz) next.type = "QUIZ";
+    onChange(next);
+  };
   return (
     <>
       {showHeading && <><h2>02 / Choose saved question sets</h2>
-      <p>Select quizzes or coding sets from your Question Bank. Each assessment keeps its own copy.</p></>}
+      <p>Select saved sets or individual questions. The assessment format updates automatically when you mix coding and quiz content.</p></>}
       <div className="question-picker-toolbar">
         <input className="search" aria-label="Search saved question sets" placeholder="Search saved sets…" value={search} onChange={(e) => setSearch(e.target.value)} />
         {onRefresh && <button type="button" className="btn secondary" aria-label="Refresh question bank" disabled={refreshing} onClick={refresh}><RefreshCw size={16} />{refreshing ? "Refreshing…" : "Refresh"}</button>}
@@ -65,7 +77,7 @@ export default function AssessmentQuestionPicker({ sets, bank, form, onChange, o
           </label>;
         })}
       </div>
-      {!visible.length && <div className="empty">{compatible.length ? "No sets match your search." : "No saved sets of this type yet. Create them in the Question Bank first."}</div>}
+      {!visible.length && <div className="empty">{allSets.length ? "No sets match your search." : "No saved sets yet. Create them in the Question Bank first."}</div>}
       {!!form.questionSetIds.length && <div className="selected-set-order"><h3>Selected sets · assessment order</h3>
         {form.questionSetIds.map((id, index) => <div className="row between" key={id}>
           <span>{index + 1}. {allSets.find((set) => set._id === id)?.title || "Unavailable set"}</span>
@@ -76,8 +88,8 @@ export default function AssessmentQuestionPicker({ sets, bank, form, onChange, o
         </div>)}
       </div>}
       {!!individual.length && <details className="existing-question-picker">
-        <summary>Previously saved individual questions ({form.questionIds.length} selected)</summary>
-        <p>These questions remain available from your earlier question bank. They appear before selected sets.</p>
+        <summary>Individual Question Bank questions ({individual.length} available · {form.questionIds.length} selected)</summary>
+        <p>Individual questions appear before saved sets. Coding questions automatically switch the assessment format to Coding or Mixed.</p>
         {individual.map((q) => <label className="question-select" key={q._id}><input type="checkbox" checked={form.questionIds.includes(q._id)} onChange={(e) => toggle("questionIds", q._id, e.target.checked)} /><strong>{q.title}</strong><Badge>{q.type}</Badge></label>)}
       </details>}
       <p className="selection-total">{questionCount(allSets, form)} / 100 questions selected</p>

@@ -1,4 +1,5 @@
 export default function Console({ result }) {
+  if (!result) return null;
   return (
     <div className="console">
       {result?.results?.map((r, i) => (
@@ -12,7 +13,6 @@ export default function Console({ result }) {
           </small>
         </section>
       ))}
-      {!result && <p>Run your code to see sample execution output.</p>}
     </div>
   );
 }

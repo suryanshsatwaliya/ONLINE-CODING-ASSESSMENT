@@ -20,6 +20,11 @@ export const studentQuestion = (q) => {
   const { correctAnswer, explanation, testCases, ...safe } = q;
   return {
     ...safe,
+    examples: Array.isArray(safe.examples) ? safe.examples : [],
+    starterCode: safe.starterCode && typeof safe.starterCode === "object" ? safe.starterCode : {},
+    supportedLanguages: Array.isArray(safe.supportedLanguages) && safe.supportedLanguages.length
+      ? safe.supportedLanguages
+      : ["python"],
     testCases: (testCases || [])
       .filter((t) => !t.hidden)
       .map(({ input, expectedOutput }) => ({ input, expectedOutput })),

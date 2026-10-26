@@ -9,6 +9,7 @@ import Badge from "../../components/common/Badge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import AssessmentAccess from "../../components/teacher/AssessmentAccess";
 import DeleteAssessmentButton from "../../components/teacher/DeleteAssessmentButton";
+import ReuseAssessmentModal from "../../components/teacher/ReuseAssessmentModal";
 import { useAssessmentUpdates } from "../../hooks/useAssessmentUpdates";
 import AssessmentQuestionPicker, { assessmentForm, availableSets, questionCount as countQuestions } from "../../components/teacher/AssessmentQuestionPicker";
 import SecuritySettings, {
@@ -49,6 +50,7 @@ export default function CreateAssessment() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [reuseOpen, setReuseOpen] = useState(false);
   const savePending = useRef(false);
   const lastServerStatus = useRef(null);
   const locked = ["LIVE", "ENDED"].includes(form.status);
@@ -104,7 +106,7 @@ export default function CreateAssessment() {
       const { data } = id
         ? await api.put("/assessments/" + id, form)
         : await api.post("/assessments", form);
-      toast("Assessment saved");
+      toast("Assessment saved successfully", { success: true });
       if (id) {
         lastServerStatus.current = data.status;
         F(assessmentForm(data));
@@ -154,6 +156,7 @@ export default function CreateAssessment() {
             {form.status === "ENDED" && form.endReason && <small>{form.endReason === "ALL_FINISHED" ? "Ended automatically: all assigned students finished." : form.endReason === "TIME_EXPIRED" ? "Ended automatically: assessment time expired." : "Ended by teacher."}</small>}
           </div>
           <div className="row">
+            {form.status === "ENDED" && <Button variant="secondary" onClick={() => setReuseOpen(true)}>Reuse assignment</Button>}
             <DeleteAssessmentButton assessment={{ ...form, _id: id }} onDeleted={() => nav("/teacher/assessments", { replace: true })} />
             {!locked && !(form.status === "SCHEDULED" && form.startTime) && (
               <Button onClick={() => Confirm("start")}>Start assessment</Button>
@@ -380,6 +383,10 @@ export default function CreateAssessment() {
             : "Saved answers will be submitted. Further student changes will be blocked."}
         </ConfirmDialog>
       )}
+      {reuseOpen && form.status === "ENDED" && <ReuseAssessmentModal assessmentId={id} onClose={() => setReuseOpen(false)} onCreated={(newId) => {
+        setReuseOpen(false);
+        nav("/teacher/assessments/" + newId);
+      }} />}
     </>
   );
 }

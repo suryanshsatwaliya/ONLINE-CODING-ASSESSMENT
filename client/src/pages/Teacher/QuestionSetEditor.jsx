@@ -52,7 +52,7 @@ export default function QuestionSetEditor() {
     try {
       const { data } = id ? await api.put("/question-sets/" + id, form) : await api.post("/question-sets", form);
       setDirty(false);
-      toast(coding ? "Coding set saved to Question Bank" : "Quiz saved to Question Bank");
+      toast(coding ? "Coding set saved successfully" : "Quiz saved successfully", { success: true });
       if (!id) nav("/teacher/questions/sets/" + data._id, { replace: true });
       else setForm((previous) => ({ ...previous, revision: data.revision }));
     } catch (e) {
@@ -94,7 +94,15 @@ export default function QuestionSetEditor() {
                 </div>
               </div>
               {coding ? <>
-                <LeetcodeImport value={q} onChange={(updated) => updateQuestion(q.draftId, updated)} onBusy={setImporting} />
+                <LeetcodeImport
+                  value={q}
+                  onChange={(updated) => updateQuestion(q.draftId, updated)}
+                  onBusy={setImporting}
+                  onImported={(imported) => change((previous) => ({
+                    ...previous,
+                    title: previous.title.trim() ? previous.title : imported.title.replace(/^\s*\d+\.\s*/, ""),
+                  }))}
+                />
                 <div className="form-grid">
                   <Input label="Problem title" required maxLength={200} value={q.title} onChange={(e) => updateQuestion(q.draftId, { ...q, title: e.target.value })} />
                   <Input label="Points" type="number" required min="0.1" max="1000" step="0.1" value={q.marks || ""} onChange={(e) => updateQuestion(q.draftId, { ...q, marks: e.target.value === "" ? "" : Number(e.target.value) })} />

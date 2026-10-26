@@ -61,17 +61,24 @@ export default function Students() {
           value={search}
           onChange={(e) => S(e.target.value)}
         />
+        <select
+          aria-label="Filter by section"
+          value={section}
+          onChange={(e) => Sec(e.target.value)}
+        >
+          <option value="">No section selected</option>
+          {[...new Set(rows.map((s) => s.section).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+            .map((x) => (
+              <option key={x} value={x}>{x}</option>
+            ))}
+        </select>
         <select value={course} onChange={(e) => C(e.target.value)}>
           <option value="">All courses</option>
           {[...new Set(rows.map((s) => s.course))].map((x) => (
             <option key={x}>{x}</option>
           ))}
         </select>
-        <input
-          placeholder="Filter section"
-          value={section}
-          onChange={(e) => Sec(e.target.value)}
-        />
         <select value={status} onChange={(e) => St(e.target.value)}>
           <option value="">All statuses</option>
           <option>ACTIVE</option>
@@ -79,17 +86,25 @@ export default function Students() {
         </select>
       </div>
       <div className="card">
-        <StudentTable
-          students={rows.filter(
-            (s) =>
-              (s.name + s.uid).toLowerCase().includes(search.toLowerCase()) &&
-              (!course || s.course === course) &&
-              s.section.toLowerCase().includes(section.toLowerCase()) &&
-              (!status || s.status === status),
-          )}
-          onEdit={F}
-          onDelete={D}
-        />
+        {section ? (
+          <div className="student-results-transition" key={section}>
+            <StudentTable
+              students={rows
+                .filter(
+                  (s) =>
+                    (s.name + s.uid).toLowerCase().includes(search.toLowerCase()) &&
+                    (!course || s.course === course) &&
+                    s.section === section &&
+                    (!status || s.status === status),
+                )
+                .sort((a, b) => a.uid.localeCompare(b.uid, undefined, { numeric: true, sensitivity: "base" }))}
+              onEdit={F}
+              onDelete={D}
+            />
+          </div>
+        ) : (
+          <div className="empty">Select a section to view its students.</div>
+        )}
       </div>
       {form && (
         <Modal

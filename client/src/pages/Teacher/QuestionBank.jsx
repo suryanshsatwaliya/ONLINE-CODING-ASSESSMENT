@@ -33,7 +33,7 @@ export default function QuestionBank() {
         : await api.post("/questions", q);
       Q(null);
       load();
-      toast("Question saved");
+      toast("Question saved successfully", { success: true });
     } catch (e) {
       toast(errorMessage(e));
     }

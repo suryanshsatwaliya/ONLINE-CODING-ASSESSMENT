@@ -1,6 +1,6 @@
 import { updateAssessmentTiming } from "../../utils/assessmentTiming";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, ClipboardList, Code2, Layers3, Clock3, ShieldCheck, Users, BookOpen, CheckCircle2 } from "lucide-react";
 import { api, errorMessage } from "../../services/api";
 import { useToast } from "../../components/common/Toast";
@@ -19,18 +19,62 @@ export default function NewAssessment() {
   const [sets, setSets] = useState([]), [bank, setBank] = useState([]), [students, setStudents] = useState([]);
   const [step, setStep] = useState(0), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState("");
   const [error, setError] = useState(""), [saving, setSaving] = useState(false);
-  const [assigned, setAssigned] = useState([]), [studentSearch, setStudentSearch] = useState("");
+  const [assigned, setAssigned] = useState([]), [studentSearch, setStudentSearch] = useState(""), [studentSection, setStudentSection] = useState("");
   const pending = useRef(false), createdId = useRef(null), formElement = useRef(null), heading = useRef(null);
-  const nav = useNavigate(), toast = useToast();
+  const nav = useNavigate(), location = useLocation(), toast = useToast();
+  const reuseSourceId = useRef(location.state?.reuseAssessmentId || null);
   const total = questionCount(sets, form);
-  const selectedSets = form.questionSetIds.map((id) => sets.find((set) => set._id === id)).filter(Boolean);
-  const points = selectedSets.reduce((sum, set) => sum + set.totalMarks, 0) + form.questionIds.reduce((sum, id) => sum + (bank.find((q) => q._id === id)?.marks || 0), 0);
+  const selectedSets = form.questionSetIds.map((id) => {
+    const saved = sets.find((set) => set._id === id);
+    if (saved) return saved;
+    const snapshot = (form.questionSets || []).find((set) => String(set.setId) === id);
+    return snapshot && {
+      ...snapshot,
+      _id: id,
+      totalMarks: (form.questions || []).filter((question) => String(question.sourceSetId) === id).reduce((sum, question) => sum + (question.marks || 0), 0),
+    };
+  }).filter(Boolean);
+  const points = selectedSets.reduce((sum, set) => sum + (set.totalMarks || 0), 0) + form.questionIds.reduce((sum, id) => sum + (bank.find((q) => q._id === id)?.marks || form.questions?.find((q) => q._id === id)?.marks || 0), 0);
+  const sections = [...new Set(students.map((student) => student.section).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const visibleStudents = students.filter((student) =>
+    (!studentSection || student.section === studentSection) &&
+    `${student.name} ${student.uid} ${student.course} ${student.section}`.toLowerCase().includes(studentSearch.toLowerCase()),
+  );
   const set = (key, value) => setForm((previous) => updateAssessmentTiming(previous, key, value));
   async function load() {
     setLoading(true); setLoadError("");
     try {
-      const [q, library, roster] = await Promise.all([api.get("/questions"), api.get("/question-sets"), api.get("/students")]);
+      const [q, library, roster, template] = await Promise.all([
+        api.get("/questions"), api.get("/question-sets"), api.get("/students"),
+        ...(reuseSourceId.current ? [api.get("/assessments/" + reuseSourceId.current)] : []),
+      ]);
       setBank(q.data); setSets(library.data); setStudents(roster.data);
+      if (template) {
+        const source = template.data;
+        setForm({
+          ...structuredClone(initial),
+          title: `${source.title} (Copy)`,
+          description: source.description || "",
+          instructions: source.instructions || "",
+          type: source.type,
+          duration: source.duration,
+          status: "DRAFT",
+          startTime: null,
+          endTime: null,
+          questionIds: (source.questions || []).filter((question) => !question.sourceSetId).map((question) => question._id),
+          questionSetIds: (source.questionSets || []).map((set) => String(set.setId)),
+          questionSets: source.questionSets || [],
+          questions: source.questions || [],
+          securitySettings: source.securitySettings || defaultSecurity,
+          randomizeQuestions: Boolean(source.randomizeQuestions),
+          randomizeOptions: Boolean(source.randomizeOptions),
+          publishResults: false,
+          aiEnabled: Boolean(source.aiEnabled),
+          aiRubric: source.aiRubric || initial.aiRubric,
+          maxCodeRuns: source.maxCodeRuns || 0,
+        });
+      }
     } catch (e) { setLoadError(errorMessage(e)); }
     finally { setLoading(false); }
   }
@@ -84,10 +128,12 @@ export default function NewAssessment() {
       // Reuse an already created draft if assigning students needs a retry.
       const { data } = createdId.current
         ? await api.put("/assessments/" + createdId.current, form)
-        : await api.post("/assessments", form);
+        : reuseSourceId.current
+          ? await api.post(`/assessments/${reuseSourceId.current}/reuse`, form)
+          : await api.post("/assessments", form);
       createdId.current = data._id;
       await api.post("/assessments/" + data._id + "/assign", { studentIds: assigned });
-      toast("Assessment saved. Generate an access code when you’re ready to invite students.");
+      toast("Assessment saved successfully. Generate an access code when you’re ready to invite students.", { success: true });
       nav("/teacher/assessments/" + data._id);
     } catch (e) {
       setError((createdId.current ? "Your assessment is saved, but setup is not complete. Retry to finish without creating a duplicate. " : "") + errorMessage(e));
@@ -98,7 +144,7 @@ export default function NewAssessment() {
   return (
     <div className="assessment-setup">
       <Link className="as-back" to="/teacher/assessments"><ArrowLeft size={16} /> All assessments</Link>
-      <header className="as-heading"><div><span className="ah-kicker">ASSESSMENT STUDIO</span><h1>Build your next challenge.</h1><p>A few thoughtful choices. One great assessment.</p></div><span className="as-draft-label">{createdId.current ? "Saved · finish setup" : "New assessment"}</span></header>
+      <header className="as-heading"><div><span className="ah-kicker">ASSESSMENT STUDIO</span><h1>{reuseSourceId.current ? "Reuse a completed assessment." : "Build your next challenge."}</h1><p>{reuseSourceId.current ? "Questions and rules are copied. Change the title and choose the students for this run." : "A few thoughtful choices. One great assessment."}</p></div><span className="as-draft-label">{createdId.current ? "Saved · finish setup" : reuseSourceId.current ? "Reusable copy" : "New assessment"}</span></header>
       <nav className="as-steps" aria-label="Assessment setup steps">
         {steps.map((label, index) => <button type="button" key={label} disabled={saving} className={step === index ? "active" : step > index ? "complete" : ""} aria-current={step === index ? "step" : undefined} onClick={() => moveTo(index)}><span>{step > index ? <Check size={16} /> : `0${index + 1}`}</span><strong>{label}</strong></button>)}
       </nav>
@@ -131,8 +177,9 @@ export default function NewAssessment() {
                 <div className="as-review-banner"><CheckCircle2 size={26} /><div><strong>{form.title}</strong><span>{form.type === "QUIZ" ? "Quiz" : form.type === "CODING" ? "Coding" : "Mixed"} · {total} questions · {form.duration} minutes</span></div><button type="button" onClick={() => moveTo(0)}>Edit</button></div>
                 <h3>Selected content</h3><div className="as-review-sets">{selectedSets.map((item) => <div key={item._id}><BookOpen size={17} /><span>{item.title}</span><small>{item.questionCount} questions</small></div>)}{!!form.questionIds.length && <div><BookOpen size={17} /><span>Individual bank questions</span><small>{form.questionIds.length} questions</small></div>}</div>
                 <div className="as-subheading"><Users size={19} /><h3>Assign students <span className="as-optional">Optional</span></h3></div><p className="as-help">Select students now, or assign them after saving.</p>
-                <input className="search" aria-label="Search students to assign" placeholder="Search by name, UID, course or section…" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} />
-                <div className="as-student-list">{students.filter((s) => `${s.name} ${s.uid} ${s.course} ${s.section}`.toLowerCase().includes(studentSearch.toLowerCase())).map((s) => <label key={s._id}><input type="checkbox" checked={assigned.includes(s._id)} onChange={(e) => setAssigned(e.target.checked ? [...assigned, s._id] : assigned.filter((id) => id !== s._id))} /><span><strong>{s.name}</strong><small>{s.uid} · {s.course} · {s.section}</small></span></label>)}{!students.length && <p>No students yet. You can assign them from the saved assessment later.</p>}</div>
+                <div className="form-grid"><label className="field">Filter by section<select value={studentSection} onChange={(e) => setStudentSection(e.target.value)}><option value="">All sections</option>{sections.map((section) => <option key={section} value={section}>{section}</option>)}</select></label><label className="field">Search students<input aria-label="Search students to assign" placeholder="Name, UID or course…" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} /></label></div>
+                {!!visibleStudents.length && <div className="row wrap"><Button type="button" variant="secondary" onClick={() => setAssigned((previous) => [...new Set([...previous, ...visibleStudents.map((student) => student._id)])])}>Select all shown ({visibleStudents.length})</Button>{!!assigned.length && <Button type="button" variant="secondary" onClick={() => setAssigned([])}>Clear selection</Button>}</div>}
+                <div className="as-student-list">{visibleStudents.map((s) => <label key={s._id}><input type="checkbox" checked={assigned.includes(s._id)} onChange={(e) => setAssigned(e.target.checked ? [...assigned, s._id] : assigned.filter((id) => id !== s._id))} /><span><strong>{s.name}</strong><small>{s.uid} · {s.course} · {s.section}</small></span></label>)}{!students.length && <p>No students yet. You can assign them from the saved assessment later.</p>}{students.length > 0 && !visibleStudents.length && <p>No students match the current section and search.</p>}</div>
                 <p className="as-help">{assigned.length} students selected. Generate an access code after saving. A Scheduled assessment with a start time launches automatically once students are assigned and a code is ready.</p>
               </>}
               {error && <p className="notice error" role="alert">{error}</p>}

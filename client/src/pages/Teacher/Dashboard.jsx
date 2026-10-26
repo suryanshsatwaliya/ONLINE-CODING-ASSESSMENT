@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Users,
   Radio,
@@ -12,12 +12,15 @@ import { api, errorMessage } from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../components/common/Toast";
 import AssessmentCard from "../../components/teacher/AssessmentCard";
+import ReuseAssessmentModal from "../../components/teacher/ReuseAssessmentModal";
 import Badge from "../../components/common/Badge";
 import { useAssessmentUpdates } from "../../hooks/useAssessmentUpdates";
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth(),
     toast = useToast();
   const [data, D] = useState({ students: [], assessments: [], results: [] });
+  const [reuseId, setReuseId] = useState(null);
   useAssessmentUpdates(useCallback(() => {
     api.get("/assessments").then(({ data: assessments }) => D((previous) => ({ ...previous, assessments }))).catch(() => {});
   }, []));
@@ -95,7 +98,7 @@ export default function Dashboard() {
       </div>
       <div className="grid two">
         {a.slice(0, 4).map((x) => (
-          <AssessmentCard assessment={x} key={x._id} onDeleted={(id) => D((previous) => ({ ...previous, assessments: previous.assessments.filter((item) => item._id !== id) }))} />
+          <AssessmentCard assessment={x} key={x._id} onReuse={setReuseId} onDeleted={(id) => D((previous) => ({ ...previous, assessments: previous.assessments.filter((item) => item._id !== id) }))} />
         ))}
       </div>
       {!a.length && (
@@ -142,6 +145,16 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+      {reuseId && <ReuseAssessmentModal assessmentId={reuseId} onClose={() => setReuseId(null)} onCreated={async (newId) => {
+        setReuseId(null);
+        try {
+          const { data: assessments } = await api.get("/assessments");
+          D((previous) => ({ ...previous, assessments }));
+        } catch (e) {
+          toast(errorMessage(e));
+        }
+        navigate(`/teacher/assessments/${newId}`);
+      }} />}
     </>
   );
 }

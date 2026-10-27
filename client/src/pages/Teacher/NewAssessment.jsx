@@ -34,6 +34,17 @@ export default function NewAssessment() {
       totalMarks: (form.questions || []).filter((question) => String(question.sourceSetId) === id).reduce((sum, question) => sum + (question.marks || 0), 0),
     };
   }).filter(Boolean);
+  const selectedIndividualQuestions = form.questionIds
+    .map((id) => bank.find((question) => question._id === id) || form.questions?.find((question) => question._id === id))
+    .filter(Boolean);
+  const selectedQuizCount = selectedSets.filter((item) => item.type !== "CODING").reduce((sum, item) => sum + (item.questionCount || 0), 0)
+    + selectedIndividualQuestions.filter((question) => question.type !== "CODING").length;
+  const selectedCodingCount = selectedSets.filter((item) => item.type === "CODING").reduce((sum, item) => sum + (item.questionCount || 0), 0)
+    + selectedIndividualQuestions.filter((question) => question.type === "CODING").length;
+  const questionDeliveryOptions = [
+    ...(form.type === "QUIZ" || selectedQuizCount > 0 || selectedCodingCount > 1 ? [["randomizeQuestions", "Shuffle question order", "Give students a different order of questions."]] : []),
+    ...(form.type === "QUIZ" || selectedQuizCount > 0 ? [["randomizeOptions", "Shuffle answer options", "Randomize the options within each multiple-choice question."]] : []),
+  ];
   const points = selectedSets.reduce((sum, set) => sum + (set.totalMarks || 0), 0) + form.questionIds.reduce((sum, id) => sum + (bank.find((q) => q._id === id)?.marks || form.questions?.find((q) => q._id === id)?.marks || 0), 0);
   const sections = [...new Set(students.map((student) => student.section).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
@@ -125,12 +136,13 @@ export default function NewAssessment() {
     }
     pending.current = true; setSaving(true); setError("");
     try {
+      const payload = { ...form, securitySettings: { ...form.securitySettings, warningAction: "AUTO_SUBMIT" } };
       // Reuse an already created draft if assigning students needs a retry.
       const { data } = createdId.current
-        ? await api.put("/assessments/" + createdId.current, form)
+        ? await api.put("/assessments/" + createdId.current, payload)
         : reuseSourceId.current
-          ? await api.post(`/assessments/${reuseSourceId.current}/reuse`, form)
-          : await api.post("/assessments", form);
+          ? await api.post(`/assessments/${reuseSourceId.current}/reuse`, payload)
+          : await api.post("/assessments", payload);
       createdId.current = data._id;
       await api.post("/assessments/" + data._id + "/assign", { studentIds: assigned });
       toast("Assessment saved successfully. Generate an access code when you’re ready to invite students.", { success: true });
@@ -151,8 +163,8 @@ export default function NewAssessment() {
       <div className="as-workspace">
         <form id="assessment-setup-form" ref={formElement} onSubmit={submit} className="as-main">
           <fieldset disabled={saving}>
-            <section className="as-panel as-step-panel" key={step}>
-              <div className="as-panel-heading"><span className="as-section-number">STEP 0{step + 1}</span><h2 tabIndex={-1} ref={heading}>{["Let’s start with the basics", "Curate the right questions", "Set the ground rules", "One last look"][step]}</h2><p>{["Give this assessment a name and choose how students will be challenged.", "Bring in content you’ve already prepared in the Question Bank.", "Choose the timing and controls that fit your classroom.", "Review your setup and choose who can take this assessment."][step]}</p></div>
+            <section className={`as-panel as-step-panel${step === 2 ? " as-rules-panel" : ""}`} key={step}>
+              <div className="as-panel-heading"><span className="as-section-number">STEP 0{step + 1}</span><h2 tabIndex={-1} ref={heading}>{["Let’s start with the basics", "Curate the right questions", "Set the ground rules", "One last look"][step]}</h2>{step !== 2 && <p>{["Give this assessment a name and choose how students will be challenged.", "Bring in content you’ve already prepared in the Question Bank.", "Choose the timing and controls that fit your classroom.", "Review your setup and choose who can take this assessment."][step]}</p>}</div>
               {step === 0 && <>
                 <Input label="Assessment title" placeholder="e.g. Data structures · Midterm quiz" required maxLength={200} value={form.title} onChange={(e) => set("title", e.target.value)} />
                 <fieldset className="as-type-selector"><legend>Assessment format</legend><div className="as-type-grid">{types.map(([value, label, description, Icon]) => <label className={form.type === value ? "selected" : ""} key={value}><input type="radio" name="assessment-format" value={value} checked={form.type === value} onChange={() => selectType(value)} /><Icon size={24} /><strong>{label}</strong><small>{description}</small><span className="as-type-check"><Check size={12} /></span></label>)}</div></fieldset>
@@ -164,13 +176,13 @@ export default function NewAssessment() {
               {step === 2 && <>
                 <div className="as-subheading"><Clock3 size={19} /><h3>Timing & availability</h3></div>
                 <div className="form-grid"><Input label="Duration (minutes)" type="number" required min={1} max={480} value={form.duration} onChange={(e) => set("duration", e.target.value === "" ? "" : Number(e.target.value))} /><label className="field">Save as<select value={form.status} onChange={(e) => set("status", e.target.value)}><option value="DRAFT">Draft · prepare for later</option><option value="SCHEDULED">Scheduled · allow lobby access</option></select></label></div>
-                <p className="as-help">Scheduled assessments start automatically at the chosen time. They end when time runs out or every assigned student finishes. Late joiners receive only the remaining time.</p>
                 <details className="as-disclosure"><summary>Schedule the assessment <span>Optional</span></summary><div className="form-grid">{[["startTime", "Scheduled start time"], ["endTime", "Hard closing time"]].map(([key, label]) => <Input key={key} label={label} type="datetime-local" readOnly={key === "endTime" && Boolean(form.startTime)} value={localDate(form[key])} onChange={(e) => set(key, e.target.value ? new Date(e.target.value).toISOString() : null)} />)}</div><small>Hard close is calculated from the start time plus duration. Save as Scheduled, assign students and generate an access code before the start. Without a start time, you can start manually.</small></details>
                 <div className="as-subheading"><ShieldCheck size={19} /><h3>Assessment integrity</h3></div>
-                <div className="as-security-note"><ShieldCheck size={22} /><div><strong>Your classroom, your rules</strong><p>Fullscreen, browser monitoring and clipboard controls use your configured settings.</p></div></div>
-                <details className="as-disclosure"><summary>Review and customize security</summary><SecuritySettings value={form.securitySettings} onChange={(value) => set("securitySettings", value)} /></details>
-                <div className="as-subheading"><Layers3 size={19} /><h3>Question delivery</h3></div>
-                <div className="as-option-stack">{[["randomizeQuestions", "Shuffle question order", "Give students a different order of questions."], ["randomizeOptions", "Shuffle answer options", "Randomize the options within each multiple-choice question."]].map(([key, label, description]) => <label key={key}><span><strong>{label}</strong><small>{description}</small></span><input type="checkbox" checked={form[key]} onChange={(e) => set(key, e.target.checked)} /></label>)}</div>
+                <SecuritySettings value={form.securitySettings} onChange={(value) => set("securitySettings", value)} />
+                {!!questionDeliveryOptions.length && <>
+                  <div className="as-subheading"><Layers3 size={19} /><h3>Question delivery</h3></div>
+                  <div className="as-option-stack">{questionDeliveryOptions.map(([key, label, description]) => <label key={key}><span><strong>{label}</strong><small>{description}</small></span><input type="checkbox" checked={form[key]} onChange={(e) => set(key, e.target.checked)} /></label>)}</div>
+                </>}
                 {form.type !== "QUIZ" && <details className="as-disclosure"><summary>Coding & AI review settings</summary><Input label="Code runs per student (leave blank for unlimited)" type="number" min={0} max={1000} value={form.maxCodeRuns || ""} onChange={(e) => set("maxCodeRuns", Number(e.target.value))} /><label className="check"><input type="checkbox" checked={form.aiEnabled} onChange={(e) => set("aiEnabled", e.target.checked)} />Enable teacher-reviewed AI feedback</label>{form.aiEnabled && <label className="field">AI rubric<textarea value={form.aiRubric} onChange={(e) => set("aiRubric", e.target.value)} /></label>}</details>}
               </>}
               {step === 3 && <>

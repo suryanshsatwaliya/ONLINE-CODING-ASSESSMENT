@@ -56,9 +56,26 @@ export async function studentLogin(req, res) {
       id: s._id,
       name: s.name,
       uid: s.uid,
+      section: s.section,
+      email: s.email,
       role: "STUDENT",
       assessmentId: a._id,
     },
   });
 }
-export const me = (req, res) => res.json(req.user);
+export async function me(req, res) {
+  if (req.user.role !== "STUDENT") return res.json(req.user);
+  const student = await Student.findById(req.user.id).select("name uid section email");
+  if (!student) throw new ApiError(404, "Student profile not found");
+  res.json({
+    user: {
+      id: student._id,
+      name: student.name,
+      uid: student.uid,
+      section: student.section,
+      email: student.email,
+      role: "STUDENT",
+      assessmentId: req.user.assessmentId,
+    },
+  });
+}

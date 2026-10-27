@@ -5,6 +5,16 @@ import { errorMessage } from "../../services/api";
 import { useFullscreen } from "../../hooks/useFullscreen";
 import Navbar from "../../components/layout/Navbar";
 import { useAuth } from "../../hooks/useAuth";
+const terminationLabels = {
+  FULLSCREEN_EXIT: "Fullscreen was exited",
+  TAB_HIDDEN: "The assessment tab was hidden or switched away from",
+  WINDOW_BLUR: "The assessment window lost focus",
+  COPY_ATTEMPT: "A copy attempt was detected",
+  PASTE_ATTEMPT: "A paste attempt was detected",
+  CUT_ATTEMPT: "A cut attempt was detected",
+  CONTEXT_MENU_ATTEMPT: "A right-click attempt was detected",
+  PAGE_EXIT_ATTEMPT: "An attempt to leave the assessment page was detected",
+};
 export default function Result() {
   const { logout } = useAuth();
   const { id } = useParams(),
@@ -39,7 +49,7 @@ export default function Result() {
           </h1>
           <p>
             {data?.status === "TERMINATED"
-              ? "Your assessment was terminated because the configured warning limit was reached."
+              ? `${terminationLabels[data.terminationReason] || "A security rule violation was detected"}, so your assessment was terminated. The browser cannot identify whether an extension caused the event.`
               : data?.status === "EXPIRED"
                 ? "Time has ended. Your saved answers were submitted."
                 : "Your saved work has been received."}

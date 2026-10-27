@@ -14,6 +14,7 @@ export const events = [
   "RECONNECTED",
 ];
 export const securitySchema = z.object({
+  strictExamMode: z.boolean().default(true),
   requireFullscreen: z.boolean().default(true),
   monitorTabSwitching: z.boolean().default(true),
   monitorWindowFocus: z.boolean().default(true),
@@ -21,7 +22,7 @@ export const securitySchema = z.object({
   blockCopy: z.boolean().default(true),
   blockPaste: z.boolean().default(true),
   blockCut: z.boolean().default(true),
-  blockContextMenu: z.boolean().default(false),
+  blockContextMenu: z.boolean().default(true),
   maxWarnings: z.number().int().min(1).max(100).default(3),
   warningAction: z.enum(["AUTO_SUBMIT", "TERMINATE"]).default("AUTO_SUBMIT"),
   eventRules: z
@@ -29,10 +30,13 @@ export const securitySchema = z.object({
     .default({
       FULLSCREEN_EXIT: "WARNING",
       TAB_HIDDEN: "WARNING",
-      WINDOW_BLUR: "LOG",
+      WINDOW_BLUR: "WARNING",
+      WINDOW_FOCUS: "LOG",
       COPY_ATTEMPT: "WARNING",
       PASTE_ATTEMPT: "WARNING",
       CUT_ATTEMPT: "WARNING",
+      CONTEXT_MENU_ATTEMPT: "WARNING",
+      PAGE_EXIT_ATTEMPT: "WARNING",
       DISCONNECTED: "LOG",
       RECONNECTED: "LOG",
     }),

@@ -7,6 +7,7 @@ import { useAuth } from "../../hooks/useAuth";
 import Navbar from "../../components/layout/Navbar";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
+import { chromeOnlyMessage, isGoogleChrome } from "../../utils/browserPolicy";
 
 export default function StudentLogin() {
   const [uid, setUid] = useState("");
@@ -15,9 +16,14 @@ export default function StudentLogin() {
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const { login } = useAuth(), nav = useNavigate();
+  const chromeAllowed = isGoogleChrome();
   async function submit(event) {
     event.preventDefault();
     if (pending.current) return;
+    if (!chromeAllowed) {
+      setError(chromeOnlyMessage);
+      return;
+    }
     if (!/^[A-Z0-9]{6}$/.test(accessCode)) {
       setError("Enter exactly 6 letters and numbers from your teacher’s code.");
       return;
@@ -52,10 +58,11 @@ export default function StudentLogin() {
             <Input label="Student UID" placeholder="Enter your student UID" autoComplete="username" autoCapitalize="characters" spellCheck={false} maxLength={40} required value={uid} onChange={(e) => setUid(e.target.value.toUpperCase())} />
             <Input label="Assessment code" className="entry-code-input" placeholder="A7K2M9" autoComplete="off" autoCapitalize="characters" spellCheck={false} minLength={6} maxLength={6} pattern="[A-Z0-9]{6}" title="Enter 6 uppercase letters and numbers." aria-describedby="entry-code-hint" required value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))} />
             <p id="entry-code-hint" className="entry-code-hint">6 characters · uppercase letters and numbers</p>
+            {!chromeAllowed && <p className="notice error" role="alert">{chromeOnlyMessage}</p>}
             {error && <p className="notice error" role="alert">{error}</p>}
-            <Button type="submit" disabled={busy}>{busy ? "Checking your details…" : "Join assessment"}<ArrowRight size={18} /></Button>
+            <Button type="submit" disabled={busy || !chromeAllowed}>{busy ? "Checking your details…" : "Join assessment"}<ArrowRight size={18} /></Button>
           </fieldset>
-          <div className="entry-help"><strong>Don’t have a code yet?</strong><p>Ask your teacher for the assessment code and make sure your UID is on their student list.</p></div>
+          <div className="entry-help"><strong>Before your exam</strong><p>Open the portal in Chrome Incognito. A normal website cannot verify Incognito mode or reliably list installed extensions.</p></div>
         </form>
       </div>
     </main>

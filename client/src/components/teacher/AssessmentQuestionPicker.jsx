@@ -38,27 +38,24 @@ export default function AssessmentQuestionPicker({ sets, bank, form, onChange, o
     };
   }, [refresh]);
   const allSets = availableSets(sets, form);
-  const visible = allSets.filter((set) => set.title.toLowerCase().includes(search.toLowerCase()));
+  const matchesAssessmentType = (type) =>
+    form.type === "MIXED" ||
+    (form.type === "CODING" ? type === "CODING" : type !== "CODING");
+  const compatibleSets = allSets.filter((set) => matchesAssessmentType(set.type));
+  const visible = compatibleSets.filter((set) => set.title.toLowerCase().includes(search.toLowerCase()));
   const individual = [...bank, ...(form.questions || []).filter((q) => !q.sourceSetId && !bank.some((item) => item._id === q._id))];
+  const compatibleIndividual = individual.filter((question) => matchesAssessmentType(question.type));
   const toggle = (key, id, checked) => {
     const next = {
       ...form,
       [key]: checked ? [...form[key], id] : form[key].filter((item) => item !== id),
     };
-    const selectedSets = next.questionSetIds.map((setId) => allSets.find((set) => set._id === setId)).filter(Boolean);
-    const selectedQuestions = next.questionIds.map((questionId) => individual.find((question) => question._id === questionId)).filter(Boolean);
-    const types = [...selectedSets, ...selectedQuestions].map((item) => item.type);
-    const hasCoding = types.includes("CODING");
-    const hasQuiz = types.some((type) => type !== "CODING");
-    if (hasCoding && hasQuiz) next.type = "MIXED";
-    else if (hasCoding) next.type = "CODING";
-    else if (hasQuiz) next.type = "QUIZ";
     onChange(next);
   };
   return (
     <>
       {showHeading && <><h2>02 / Choose saved question sets</h2>
-      <p>Select saved sets or individual questions. The assessment format updates automatically when you mix coding and quiz content.</p></>}
+      <p>Select saved sets or individual questions for this {form.type === "MIXED" ? "mixed" : form.type === "CODING" ? "coding" : "quiz"} assessment.</p></>}
       <div className="question-picker-toolbar">
         <input className="search" aria-label="Search saved question sets" placeholder="Search saved sets…" value={search} onChange={(e) => setSearch(e.target.value)} />
         {onRefresh && <button type="button" className="btn secondary" aria-label="Refresh question bank" disabled={refreshing} onClick={refresh}><RefreshCw size={16} />{refreshing ? "Refreshing…" : "Refresh"}</button>}
@@ -77,7 +74,7 @@ export default function AssessmentQuestionPicker({ sets, bank, form, onChange, o
           </label>;
         })}
       </div>
-      {!visible.length && <div className="empty">{allSets.length ? "No sets match your search." : "No saved sets yet. Create them in the Question Bank first."}</div>}
+      {!visible.length && <div className="empty">{compatibleSets.length ? "No sets match your search." : compatibleIndividual.length ? "No matching saved sets. Individual questions are listed below." : `No ${form.type === "CODING" ? "coding" : form.type === "QUIZ" ? "quiz" : "matching"} questions available. Create them in the Question Bank first.`}</div>}
       {!!form.questionSetIds.length && <div className="selected-set-order"><h3>Selected sets · assessment order</h3>
         {form.questionSetIds.map((id, index) => <div className="row between" key={id}>
           <span>{index + 1}. {allSets.find((set) => set._id === id)?.title || "Unavailable set"}</span>
@@ -87,10 +84,10 @@ export default function AssessmentQuestionPicker({ sets, bank, form, onChange, o
             {direction < 0 ? "↑" : "↓"}</button>)}<button type="button" onClick={() => toggle("questionSetIds", id, false)}>Remove</button></span>
         </div>)}
       </div>}
-      {!!individual.length && <details className="existing-question-picker">
-        <summary>Individual Question Bank questions ({individual.length} available · {form.questionIds.length} selected)</summary>
-        <p>Individual questions appear before saved sets. Coding questions automatically switch the assessment format to Coding or Mixed.</p>
-        {individual.map((q) => <label className="question-select" key={q._id}><input type="checkbox" checked={form.questionIds.includes(q._id)} onChange={(e) => toggle("questionIds", q._id, e.target.checked)} /><strong>{q.title}</strong><Badge>{q.type}</Badge></label>)}
+      {!!compatibleIndividual.length && <details className="existing-question-picker">
+        <summary>Individual Question Bank questions ({compatibleIndividual.length} available · {form.questionIds.length} selected)</summary>
+        <p>Individual questions appear before saved sets.</p>
+        {compatibleIndividual.map((q) => <label className="question-select" key={q._id}><input type="checkbox" checked={form.questionIds.includes(q._id)} onChange={(e) => toggle("questionIds", q._id, e.target.checked)} /><strong>{q.title}</strong><Badge>{q.type}</Badge></label>)}
       </details>}
       <p className="selection-total">{questionCount(allSets, form)} / 100 questions selected</p>
       {form.questionSets?.length > 0 && <small>Retained sets use this assessment’s saved version. To use a newer bank version, remove the set, save, then select it again.</small>}

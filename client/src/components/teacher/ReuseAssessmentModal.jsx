@@ -66,7 +66,7 @@ export default function ReuseAssessmentModal({ assessmentId, onClose, onCreated 
       endTime: null,
       questionIds: (source.questions || []).filter((question) => !question.sourceSetId).map((question) => String(question._id)),
       questionSetIds: (source.questionSets || []).map((set) => String(set.setId)),
-      securitySettings,
+      securitySettings: { ...securitySettings, warningAction: "AUTO_SUBMIT" },
       randomizeQuestions: Boolean(source.randomizeQuestions),
       randomizeOptions: Boolean(source.randomizeOptions),
       publishResults: false,

@@ -13,12 +13,16 @@ export function AuthProvider({ children }) {
     sessionStorage.setItem("user", JSON.stringify(data.user));
     setUser(data.user);
   }
+  function updateUser(nextUser) {
+    sessionStorage.setItem("user", JSON.stringify(nextUser));
+    setUser(nextUser);
+  }
   function logout() {
     sessionStorage.clear();
     setUser(null);
   }
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

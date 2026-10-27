@@ -26,6 +26,7 @@ export async function mine(req, res) {
   const a = await Assessment.findById(t.assessment);
   res.json({
     status: t.status,
+    terminationReason: t.terminationReason || null,
     published: a.publishResults,
     result: a.publishResults ? await Result.findOne({ attempt: t._id }) : null,
   });

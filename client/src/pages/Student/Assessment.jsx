@@ -70,12 +70,22 @@ export default function Assessment() {
     attemptId: id,
     active,
     settings: stableSettings,
+    onImmediateWarning: (eventType) => {
+      W({
+        eventType,
+        warningCount: (data?.attempt.warningCount || 0) + 1,
+        pending: true,
+      });
+    },
     onWarning: (w) => {
-      W(w);
+      W({ ...w, pending: false });
       D((d) => ({
         ...d,
         attempt: { ...d.attempt, warningCount: w.warningCount },
       }));
+    },
+    onWarningResolved: (eventType) => {
+      W((current) => current?.pending && current.eventType === eventType ? null : current);
     },
     onClosed: refresh,
   });

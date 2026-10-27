@@ -24,7 +24,19 @@ export function warningDecision(settings, type, t, now) {
     ? "LEAVE"
     : type;
   const enabled = !toggles[type] || settings[toggles[type]];
-  const rule = enabled ? settings.eventRules?.[type] || "LOG" : "IGNORE";
+  const defaultRule = [
+    "FULLSCREEN_EXIT",
+    "TAB_HIDDEN",
+    "WINDOW_BLUR",
+    "COPY_ATTEMPT",
+    "PASTE_ATTEMPT",
+    "CUT_ATTEMPT",
+    "CONTEXT_MENU_ATTEMPT",
+    "PAGE_EXIT_ATTEMPT",
+  ].includes(type)
+    ? "WARNING"
+    : "LOG";
+  const rule = enabled ? settings.eventRules?.[type] || defaultRule : "IGNORE";
   const duplicate =
     t.lastWarningGroup === group && now - new Date(t.lastWarningAt || 0) < 2000;
   return { group, rule, warn: rule === "WARNING" && !duplicate };
@@ -59,15 +71,11 @@ export async function recordEvent(user, body) {
       ],
       { session },
     );
+    // Proctoring events issue warnings; reaching the warning limit submits
+    // and grades the attempt. Never terminate directly for copy/paste,
+    // right-click, or legacy TERMINATE warning-limit settings.
     if (d.warn && t.warningCount >= a.securitySettings.maxWarnings)
-      await closeAttempt(
-        t,
-        a,
-        a.securitySettings.warningAction === "TERMINATE"
-          ? "TERMINATED"
-          : "SUBMITTED",
-        session,
-      );
+      await closeAttempt(t, a, "SUBMITTED", session);
     return event;
   });
   emitAttempt(out.a, out.t);

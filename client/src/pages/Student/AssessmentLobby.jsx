@@ -9,7 +9,7 @@ import Badge from "../../components/common/Badge";
 import { useAuth } from "../../hooks/useAuth";
 import { useTimer } from "../../hooks/useTimer";
 export default function AssessmentLobby() {
-  const { logout } = useAuth();
+  const { logout, user, updateUser } = useAuth();
   const { id } = useParams(),
     nav = useNavigate(),
     fs = useFullscreen();
@@ -34,6 +34,11 @@ export default function AssessmentLobby() {
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
   }, [load]);
+  useEffect(() => {
+    api.get("/auth/me").then(({ data }) => {
+      if (data.user) updateUser(data.user);
+    }).catch(() => {});
+  }, []);
   useEffect(() => {
     if (a?.status === "SCHEDULED" && a.startTime && seconds === 0) load();
   }, [a?.status, a?.startTime, seconds, load]);
@@ -84,6 +89,15 @@ export default function AssessmentLobby() {
         <div className="card">
           <div className="row end"><Link to="/login/student" onClick={logout}>Logout</Link></div>
           <span className="eyebrow">BEFORE YOU BEGIN</span>
+          <section className="student-identity" aria-label="Your student details">
+            <h2>Your details</h2>
+            <dl>
+              <div><dt>Name</dt><dd>{user?.name || "—"}</dd></div>
+              <div><dt>UID</dt><dd>{user?.uid || "—"}</dd></div>
+              <div><dt>Section</dt><dd>{user?.section || "—"}</dd></div>
+              <div><dt>Email</dt><dd>{user?.email || "Not provided"}</dd></div>
+            </dl>
+          </section>
           <h1>{a?.title || "Assessment lobby"}</h1>
           {a && (
             <>

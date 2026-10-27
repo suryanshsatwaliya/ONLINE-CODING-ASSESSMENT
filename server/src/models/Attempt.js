@@ -9,6 +9,7 @@ export default model(
     expiresAt: Date,
     submittedAt: Date,
     warningCount: { type: Number, default: 0 },
+    terminationReason: String,
     lastWarningAt: Date,
     lastWarningGroup: String,
     answers: { type: Schema.Types.Mixed, default: {} },

@@ -19,7 +19,7 @@ export default function CodeEditor({ language, value, onChange, theme, height = 
         scrollBeyondLastLine: false,
         automaticLayout: true,
         wordWrap: "on",
-        contextmenu: true,
+        contextmenu: false,
         quickSuggestions: false,
       }}
     />

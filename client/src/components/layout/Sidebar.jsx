@@ -6,7 +6,6 @@ import {
   Library,
   Radio,
   FileCode,
-  BarChart3,
   Settings,
   LogOut,
   ShieldCheck,
@@ -18,8 +17,7 @@ const items = [
   ["assessments", "Assessments", ClipboardList],
   ["questions", "Question Bank", Library],
   ["monitor", "Live Monitor", Radio],
-  ["submissions", "Submissions", FileCode],
-  ["results", "Results", BarChart3],
+  ["submissions", "Submissions & results", FileCode],
   ["settings", "Settings", Settings],
 ];
 export default function Sidebar() {

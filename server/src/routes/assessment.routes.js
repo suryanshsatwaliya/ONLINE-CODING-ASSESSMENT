@@ -21,5 +21,7 @@ r.post("/:id/start", objectIds, c.start);
 r.post("/:id/end", objectIds, c.end);
 r.patch("/:id/publish", objectIds, c.publish);
 r.get("/:id/monitor", objectIds, c.monitor);
+r.post("/:id/monitor/time", objectIds, c.extendMonitorTime);
+r.post("/:id/monitor/students/:studentId/restart", objectIds, c.restartStudentAttempt);
 r.get("/attempt/:id/events", objectIds, c.eventLog);
 export default r;

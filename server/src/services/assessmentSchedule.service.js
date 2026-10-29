@@ -26,6 +26,7 @@ export async function startScheduledAssessments(id) {
       }
       a.startedAt = a.startTime;
       a.closesAt = closesAt;
+      a.admissionClosesAt = closesAt;
       a.revision++;
       await a.save({ session });
       return a;

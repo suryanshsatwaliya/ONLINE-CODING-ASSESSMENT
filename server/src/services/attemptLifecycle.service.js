@@ -74,9 +74,22 @@ export async function finishAssessmentIfReady(id) {
       const first = await Attempt.findOne({ assessment: a._id }).sort({ startedAt: 1 }).session(session);
       a.startedAt = first?.startedAt || a.updatedAt;
       a.closesAt = new Date(assessmentDeadline(a));
+      a.admissionClosesAt ||= a.closesAt;
       await a.save({ session });
     }
     const timedOut = assessmentDeadline(a) <= Date.now();
+    if (timedOut) {
+      // The shared assessment clock has closed, but a teacher may have granted
+      // selected students an individual extension. Keep the assessment open
+      // for their active attempts; admission is still closed by the original
+      // assessment deadline.
+      const individuallyExtendedAttempt = await Attempt.exists({
+        assessment: a._id,
+        status: "ACTIVE",
+        expiresAt: { $gt: new Date() },
+      }).session(session);
+      if (individuallyExtendedAttempt) return null;
+    }
     if (!timedOut) {
       const assigned = await AssessmentStudent.find({ assessment: a._id }).select("student").session(session);
       if (!assigned.length) return null;

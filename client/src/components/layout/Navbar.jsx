@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import ThemeToggle from "../common/ThemeToggle";
-export default function Navbar() {
+export default function Navbar({ actions }) {
   return (
     <nav className="navbar">
       <Link to="/" className="brand">
@@ -10,7 +10,9 @@ export default function Navbar() {
         </span>
         Assess<span className="muted"> / Portal</span>
       </Link>
-      <div className="navbar-actions"><span className="eyebrow">LEARN. ASSESS. GROW.</span><ThemeToggle /></div>
+      {actions ?? (
+        <div className="navbar-actions"><span className="eyebrow">LEARN. ASSESS. GROW.</span><ThemeToggle /></div>
+      )}
     </nav>
   );
 }

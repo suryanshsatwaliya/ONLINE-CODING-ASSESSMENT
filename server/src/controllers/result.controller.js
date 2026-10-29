@@ -32,11 +32,11 @@ export async function mine(req, res) {
   });
 }
 export async function submissions(req, res) {
-  const assessments = await Assessment.find({
-    createdBy: req.user.id,
-  }).distinct("_id");
+  const assessmentIds = req.query.assessmentId
+    ? [(await ownAssessment(req.query.assessmentId, req.user))._id]
+    : await Assessment.find({ createdBy: req.user.id }).distinct("_id");
   res.json(
-    await CodeSubmission.find({ assessment: { $in: assessments } })
+    await CodeSubmission.find({ assessment: { $in: assessmentIds } })
       .populate("student", "name uid")
       .sort({ createdAt: -1 })
       .limit(1000),

@@ -11,5 +11,6 @@ r.use(student);
 r.post("/start", c.start);
 r.get("/:id", objectIds, c.get);
 r.patch("/:id/answers", objectIds, validate(answerSchema), c.save);
+r.patch("/:id/progress", objectIds, c.progress);
 r.post("/:id/submit", objectIds, c.submit);
 export default r;

@@ -1,6 +1,7 @@
-export default function Badge({ children }) {
+export default function Badge({ children, className = "" }) {
+  const statusClass = String(children).toLowerCase().replaceAll(/\s+/g, "-");
   return (
-    <span className={`badge ${String(children).toLowerCase()}`}>
+    <span className={`badge ${statusClass} ${className}`.trim()}>
       {children}
     </span>
   );

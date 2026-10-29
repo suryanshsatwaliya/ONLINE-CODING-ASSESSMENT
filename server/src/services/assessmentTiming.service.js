@@ -4,3 +4,10 @@ export function assessmentDeadline(assessment) {
     dates.push(+new Date(assessment.startedAt) + assessment.duration * 60000);
   return dates.length ? Math.min(...dates) : Infinity;
 }
+
+export function assessmentAdmissionDeadline(assessment) {
+  const deadline = assessmentDeadline(assessment);
+  return assessment.admissionClosesAt
+    ? Math.min(deadline, +new Date(assessment.admissionClosesAt))
+    : deadline;
+}

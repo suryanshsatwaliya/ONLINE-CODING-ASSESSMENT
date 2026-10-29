@@ -14,6 +14,7 @@ export default model(
     lastWarningGroup: String,
     answers: { type: Schema.Types.Mixed, default: {} },
     questionOrder: [String],
+    currentQuestionId: String,
     optionOrders: Schema.Types.Mixed,
     lastActivity: Date,
     connected: { type: Boolean, default: false },

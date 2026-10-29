@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import {
   Assessment,
   AssessmentStudent,
@@ -17,7 +18,7 @@ import {
   expireAttempts,
   finishAssessmentIfReady,
 } from "../services/attemptLifecycle.service.js";
-import { assessmentDeadline } from "../services/assessmentTiming.service.js";
+import { assessmentDeadline, assessmentAdmissionDeadline } from "../services/assessmentTiming.service.js";
 import { startScheduledAssessments } from "../services/assessmentSchedule.service.js";
 import { gradeAttempt } from "../services/grading.service.js";
 import { emitAttempt } from "../services/realtime.service.js";
@@ -31,21 +32,29 @@ export async function start(req, res) {
       { $inc: { revision: 1 } },
       { new: true, session },
     );
-    if (!a || assessmentDeadline(a) <= Date.now())
-      throw new ApiError(409, "Assessment has not started or has ended");
-    if (
-      !(await AssessmentStudent.exists({
+    if (!a) throw new ApiError(409, "Assessment has not started or has ended");
+    const assignment = await AssessmentStudent.findOne({
         assessment: a._id,
         student: req.user.id,
-      }).session(session))
-    )
-      throw new ApiError(403, "Not assigned");
+      }).session(session);
+    if (!assignment) throw new ApiError(403, "Not assigned");
     t = await Attempt.findOne({
       assessment: a._id,
       student: req.user.id,
     }).session(session);
-    if (t) return;
+    if (t?.status === "ACTIVE") {
+      if (t.expiresAt <= new Date()) throw new ApiError(409, "Attempt time has expired");
+      if (assignment.reentryAllowed) {
+        assignment.reentryAllowed = false;
+        await assignment.save({ session });
+      }
+      return;
+    }
+    if (t) throw new ApiError(409, "Assessment already submitted. Ask your teacher to restart your attempt.");
+    if (assessmentAdmissionDeadline(a) <= Date.now() && !assignment.reentryAllowed)
+      throw new ApiError(409, "Assessment has not started or has ended");
     const ids = a.questions.map((q) => String(q._id));
+    const questionOrder = a.randomizeQuestions ? shuffled(ids) : ids;
     const now = new Date();
     [t] = await Attempt.create(
       [
@@ -59,7 +68,8 @@ export async function start(req, res) {
               assessmentDeadline(a),
             ),
           ),
-          questionOrder: a.randomizeQuestions ? shuffled(ids) : ids,
+          questionOrder,
+          currentQuestionId: questionOrder[0],
           optionOrders: Object.fromEntries(
             a.questions.map((q) => [
               q._id,
@@ -138,6 +148,7 @@ export async function save(req, res) {
         ...t.answers,
         [req.body.questionId]: { value: v, marked: req.body.marked },
       };
+      t.currentQuestionId = req.body.questionId;
       t.markModified("answers");
       await Answer.findOneAndUpdate(
         { attempt: t._id, questionId: req.body.questionId },
@@ -148,6 +159,16 @@ export async function save(req, res) {
   );
   emitAttempt(a, t);
   res.json({ savedAt: t.lastActivity });
+}
+export async function progress(req, res) {
+  const body = z.object({ questionId: z.string().min(1).max(100) }).parse(req.body);
+  const { t, a } = await withActive(req.params.id, req.user, async (t, a) => {
+    if (!a.questions.some((question) => String(question._id) === body.questionId))
+      throw new ApiError(422, "Question not in assessment");
+    t.currentQuestionId = body.questionId;
+  });
+  emitAttempt(a, t);
+  res.json({ questionId: t.currentQuestionId });
 }
 export async function submit(req, res) {
   const { t, a } = await withActive(

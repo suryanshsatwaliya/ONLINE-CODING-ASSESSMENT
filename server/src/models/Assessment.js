@@ -12,6 +12,7 @@ export default model(
     endTime: Date,
     startedAt: Date,
     closesAt: Date,
+    admissionClosesAt: Date,
     endedAt: Date,
     endReason: String,
     status: { type: String, default: "DRAFT" },

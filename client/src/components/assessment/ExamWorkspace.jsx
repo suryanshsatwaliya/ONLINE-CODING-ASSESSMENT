@@ -105,8 +105,8 @@ export default function ExamWorkspace({ assessment: a, attempt: t, name, seconds
                             ? ""
                             : q.type === "CODING"
                               ? {
-                                  language: q.supportedLanguages?.[0] || "python",
-                                  code: q.starterCode?.[q.supportedLanguages?.[0] || "python"] || "",
+                                  language: q.supportedLanguages?.includes("cpp") ? "cpp" : q.supportedLanguages?.[0] || "python",
+                                  code: q.starterCode?.[q.supportedLanguages?.includes("cpp") ? "cpp" : q.supportedLanguages?.[0] || "python"] || "",
                                 }
                               : []),
                         !answer?.marked,

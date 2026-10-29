@@ -15,7 +15,6 @@ import QuestionBank from "../pages/Teacher/QuestionBank";
 import QuestionSetEditor from "../pages/Teacher/QuestionSetEditor";
 import LiveMonitor from "../pages/Teacher/LiveMonitor";
 import Submissions from "../pages/Teacher/Submissions";
-import Results from "../pages/Teacher/Results";
 import Settings from "../pages/Teacher/Settings";
 import StudentDashboard from "../pages/Student/StudentDashboard";
 import AssessmentLobby from "../pages/Student/AssessmentLobby";
@@ -43,7 +42,7 @@ export default function AppRoutes() {
           <Route path="questions/sets/:id" element={<QuestionSetEditor />} />
           <Route path="monitor" element={<LiveMonitor />} />
           <Route path="submissions" element={<Submissions />} />
-          <Route path="results" element={<Results />} />
+          <Route path="results" element={<Submissions />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Route>

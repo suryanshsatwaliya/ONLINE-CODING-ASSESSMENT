@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
-import { ChevronDown, ChevronUp, GripHorizontal, ListChecks, Terminal } from "lucide-react";
+import { ChevronDown, ChevronUp, GripHorizontal, GripVertical, ListChecks, Terminal } from "lucide-react";
 import { codeService } from "../../services/codeService";
 import { errorMessage } from "../../services/api";
 const CodeEditor = lazy(() => import("../coding/CodeEditor"));
@@ -23,18 +23,33 @@ export default function CodingQuestion({
       ? q.supportedLanguages
       : ["python"],
     starterCode = q.starterCode && typeof q.starterCode === "object" ? q.starterCode : {},
-    language = languages.includes(value?.language) ? value.language : languages[0],
+    defaultLanguage = languages.includes("cpp") ? "cpp" : languages[0],
+    language = languages.includes(value?.language) ? value.language : defaultLanguage,
     code = value?.code ?? starterCode[language] ?? "";
   const [result, R] = useState(null),
     [busy, B] = useState(false),
     [error, E] = useState(""),
     [job, J] = useState(null),
     [reset, Reset] = useState(false);
-  const [consoleOpen, setConsoleOpen] = useState(true);
+  const [consoleOpen, setConsoleOpen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(() => Math.min(300, Math.max(180, window.innerHeight * 0.34)));
+  const [questionPanePercent, setQuestionPanePercent] = useState(() => {
+    const saved = Number(window.localStorage.getItem("exam-coding-question-pane-percent"));
+    return Number.isFinite(saved) && saved >= 25 && saved <= 70 ? saved : 42;
+  });
   const resizeStart = useRef(null);
+  const paneResizeRef = useRef(null);
   const outputContentRef = useRef(null);
   const [outputTab, setOutputTab] = useState("testcase");
+  function updateQuestionPanePercent(percent) {
+    const next = Math.max(25, Math.min(70, percent));
+    setQuestionPanePercent(next);
+    window.localStorage.setItem("exam-coding-question-pane-percent", String(next));
+  }
+  useEffect(() => {
+    setConsoleOpen(false);
+    setOutputTab("testcase");
+  }, [q._id]);
   useEffect(() => {
     if (!consoleOpen || outputTab !== "testcase") return;
     const frame = requestAnimationFrame(() => {
@@ -91,8 +106,38 @@ export default function CodingQuestion({
     }
   }
   return (
-    <div className="coding-layout">
+    <div className="coding-layout" style={{ "--question-pane-size": `${questionPanePercent}%` }}>
       <ProblemDescription question={q} />
+      <div
+        className="coding-pane-resize"
+        role="separator"
+        tabIndex={0}
+        aria-label="Resize question and code panels"
+        aria-orientation={window.innerWidth <= 760 ? "horizontal" : "vertical"}
+        aria-valuenow={questionPanePercent}
+        aria-valuemin={25}
+        aria-valuemax={70}
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          const layout = event.currentTarget.parentElement.getBoundingClientRect();
+          paneResizeRef.current = { left: layout.left, top: layout.top, width: layout.width, height: layout.height };
+        }}
+        onPointerMove={(event) => {
+          if (!paneResizeRef.current) return;
+          const { left, top, width, height } = paneResizeRef.current;
+          const percent = window.innerWidth <= 760
+            ? ((event.clientY - top) / height) * 100
+            : ((event.clientX - left) / width) * 100;
+          updateQuestionPanePercent(percent);
+        }}
+        onPointerUp={() => { paneResizeRef.current = null; }}
+        onPointerCancel={() => { paneResizeRef.current = null; }}
+        onKeyDown={(event) => {
+          if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+          event.preventDefault();
+          updateQuestionPanePercent(questionPanePercent + (["ArrowRight", "ArrowDown"].includes(event.key) ? 2 : -2));
+        }}
+      >{window.innerWidth <= 760 ? <GripHorizontal size={16} /> : <GripVertical size={16} />}</div>
       <div className="coding-workspace">
         <div className="coding-editor-pane">
           <div className="code-toolbar coding-editor-toolbar">

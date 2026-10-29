@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import { randomUUID } from "node:crypto";
 import { generateAssessmentCode, assessmentCodeKey } from "../services/assessmentCode.service.js";
 import { z } from "zod";
 import {
@@ -10,6 +11,10 @@ import {
   AssessmentStudent,
   Attempt,
   ProctorEvent,
+  Answer,
+  CodeSubmission,
+  AIReview,
+  Result,
 } from "../models/index.js";
 import { ownAssessment } from "../services/assessment.service.js";
 import { emitAssessment } from "../services/realtime.service.js";
@@ -17,6 +22,8 @@ import { closeAttempt } from "../services/attemptLifecycle.service.js";
 import { gradeAttempt } from "../services/grading.service.js";
 import ApiError from "../utils/ApiError.js";
 import { startScheduledAssessments } from "../services/assessmentSchedule.service.js";
+import { assessmentDeadline } from "../services/assessmentTiming.service.js";
+import { emitAttempt } from "../services/realtime.service.js";
 async function payload(body, user, previous = null) {
   const qs = await Question.find({
     _id: { $in: body.questionIds },
@@ -241,6 +248,7 @@ export async function start(req, res) {
     a.status = "LIVE";
     a.startedAt = a.startTime || new Date();
     a.closesAt = new Date(Math.min(+a.startedAt + a.duration * 60000, a.endTime ? +a.endTime : Infinity));
+    a.admissionClosesAt = a.closesAt;
     a.revision++;
     await a.save({ session });
   });
@@ -323,6 +331,154 @@ export async function monitor(req, res) {
       })),
   );
 }
+
+const minuteMs = 60000;
+function setAssessmentDeadline(a, deadline) {
+  const target = new Date(deadline);
+  if (!a.startedAt) a.startedAt = new Date();
+  a.duration = Math.max(a.duration || 1, Math.ceil((+target - +new Date(a.startedAt)) / minuteMs));
+  a.closesAt = target;
+  if (a.endTime) a.endTime = target;
+}
+
+export async function extendMonitorTime(req, res) {
+  const body = z.object({
+    minutes: z.number().int().min(1).max(480),
+    scope: z.enum(["ASSESSMENT", "STUDENTS"]),
+    studentIds: z.array(z.string().regex(/^[a-f0-9]{24}$/i)).max(500).default([]),
+  }).parse(req.body);
+  if (body.scope === "STUDENTS" && !body.studentIds.length)
+    throw new ApiError(422, "Select at least one student to add time.");
+
+  let out;
+  await mongoose.connection.transaction(async (session) => {
+    const a = await Assessment.findOneAndUpdate(
+      { _id: req.params.id, createdBy: req.user.id, status: "LIVE" },
+      { $inc: { revision: 1 } },
+      { session, new: true },
+    );
+    if (!a) throw new ApiError(409, "Time can only be adjusted while the assessment is live.");
+    const now = Date.now();
+    const ms = body.minutes * minuteMs;
+    const oldDeadline = assessmentDeadline(a);
+    const baseAdmission = +(a.admissionClosesAt || new Date(oldDeadline));
+    let attempts;
+    let deadline;
+
+    if (body.scope === "ASSESSMENT") {
+      deadline = Math.max(oldDeadline, now) + ms;
+      a.admissionClosesAt = new Date(Math.max(baseAdmission, now) + ms);
+      attempts = await Attempt.find({ assessment: a._id, status: "ACTIVE" }).session(session);
+      for (const attempt of attempts) {
+        // Move every active attempt forward by the same amount, preserving any
+        // individual extension it already has beyond the shared deadline.
+        attempt.expiresAt = new Date(Math.max(+attempt.expiresAt, now) + ms);
+        attempt.revision++;
+        await attempt.save({ session });
+      }
+    } else {
+      a.admissionClosesAt ||= new Date(oldDeadline);
+      attempts = await Attempt.find({
+        assessment: a._id,
+        student: { $in: body.studentIds },
+        status: "ACTIVE",
+      }).session(session);
+      if (!attempts.length) throw new ApiError(409, "None of the selected students has an active attempt.");
+      for (const attempt of attempts) {
+        attempt.expiresAt = new Date(Math.max(+attempt.expiresAt, now) + ms);
+        attempt.revision++;
+        await attempt.save({ session });
+      }
+      // Individual accommodations change only the selected attempt clocks.
+      deadline = oldDeadline;
+    }
+
+    if (body.scope === "ASSESSMENT") setAssessmentDeadline(a, deadline);
+    await a.save({ session });
+    out = { assessment: a, count: attempts.length, deadline: a.closesAt };
+  });
+  emitAssessment(out.assessment, "ASSESSMENT_TIME_UPDATED", { assessmentId: out.assessment._id });
+  res.json({ updatedAttempts: out.count, deadline: out.deadline });
+}
+
+export async function restartStudentAttempt(req, res) {
+  const { mode } = z.object({ mode: z.enum(["BEGINNING", "CONTINUE"]) }).parse(req.body);
+  let out;
+  await mongoose.connection.transaction(async (session) => {
+    const a = await Assessment.findOneAndUpdate(
+      { _id: req.params.id, createdBy: req.user.id, status: { $in: ["LIVE", "ENDED"] } },
+      { $inc: { revision: 1 } },
+      { session, new: true },
+    );
+    if (!a) throw new ApiError(409, "This assessment cannot be restarted in its current state.");
+    const assignment = await AssessmentStudent.findOne({ assessment: a._id, student: req.params.studentId }).session(session);
+    if (!assignment) throw new ApiError(404, "Student is not assigned to this assessment.");
+    const attempt = await Attempt.findOne({ assessment: a._id, student: req.params.studentId }).session(session);
+    if (!attempt) throw new ApiError(409, "This student has not started an attempt yet.");
+    if (attempt.status === "ACTIVE") throw new ApiError(409, "This student's attempt is already active.");
+
+    const now = new Date();
+    const currentDeadline = assessmentDeadline(a);
+    if (!Number.isFinite(currentDeadline) || currentDeadline <= +now)
+      throw new ApiError(409, "The assessment deadline has passed. There is no time remaining for a restart.");
+    const reopening = a.status === "ENDED";
+    if (reopening) {
+      a.status = "LIVE";
+      a.endedAt = undefined;
+      a.endReason = undefined;
+      // Keep the original assessment deadline. A restart is only given the
+      // time still left on the assessment clock, never a fresh duration.
+      a.admissionClosesAt = new Date(+now - 1000);
+    } else {
+      a.admissionClosesAt ||= new Date(currentDeadline);
+    }
+
+    const restartDeadline = assessmentDeadline(a);
+    if (!Number.isFinite(restartDeadline) || restartDeadline <= +now)
+      throw new ApiError(409, "Could not determine the assessment's remaining time.");
+    const expiresAt = new Date(restartDeadline);
+    assignment.reentryAllowed = true;
+    await assignment.save({ session });
+
+    if (mode === "BEGINNING") {
+      const submissions = await CodeSubmission.find({ attempt: attempt._id }).select("_id").session(session);
+      await AIReview.deleteMany({ submission: { $in: submissions.map((submission) => submission._id) } }, { session });
+      await CodeSubmission.deleteMany({ attempt: attempt._id }, { session });
+      await Answer.deleteMany({ attempt: attempt._id }, { session });
+      attempt.answers = {};
+      attempt.warningCount = 0;
+      attempt.lastWarningAt = undefined;
+      attempt.lastWarningGroup = undefined;
+      attempt.currentQuestionId = attempt.questionOrder?.[0];
+    }
+    await Result.deleteOne({ attempt: attempt._id }, { session });
+    attempt.status = "ACTIVE";
+    attempt.startedAt = now;
+    attempt.expiresAt = expiresAt;
+    attempt.submittedAt = undefined;
+    attempt.terminationReason = undefined;
+    attempt.lastActivity = now;
+    attempt.revision++;
+    await attempt.save({ session });
+    await ProctorEvent.create([{
+      attemptId: attempt._id,
+      studentId: attempt.student,
+      assessmentId: a._id,
+      eventId: randomUUID(),
+      eventType: "TEACHER_RESTARTED_ATTEMPT",
+      timestamp: now,
+      warningIssued: false,
+      warningCountAfterEvent: attempt.warningCount,
+      metadata: { mode },
+    }], { session });
+    await a.save({ session });
+    out = { assessment: a, attempt };
+  });
+  emitAssessment(out.assessment, "ASSESSMENT_REOPENED", { assessmentId: out.assessment._id });
+  emitAttempt(out.assessment, out.attempt);
+  res.json({ status: out.attempt.status, expiresAt: out.attempt.expiresAt, mode });
+}
+
 export async function eventLog(req, res) {
   const t = await Attempt.findById(req.params.id);
   if (!t) throw new ApiError(404, "Attempt unavailable");

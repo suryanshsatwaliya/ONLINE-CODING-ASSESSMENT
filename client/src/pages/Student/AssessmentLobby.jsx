@@ -6,6 +6,7 @@ import { useFullscreen } from "../../hooks/useFullscreen";
 import Navbar from "../../components/layout/Navbar";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
+import Modal from "../../components/common/Modal";
 import { useAuth } from "../../hooks/useAuth";
 import { useTimer } from "../../hooks/useTimer";
 export default function AssessmentLobby() {
@@ -16,7 +17,10 @@ export default function AssessmentLobby() {
   const [a, A] = useState(null),
     [error, E] = useState(""),
     [ready, R] = useState(false),
+    [closedAttemptNotice, setClosedAttemptNotice] = useState(Boolean(user?.closedAttempt)),
     [busy, B] = useState(false);
+  const updateUserRef = useRef(updateUser);
+  updateUserRef.current = updateUser;
   const starting = useRef(false), autoTried = useRef(false);
   const seconds = useTimer(a?.status === "LIVE" ? a.closesAt || a.endTime : a?.startTime, a?.serverTime);
   const countdown = [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60].map((n) => String(n).padStart(2, "0")).join(":");
@@ -28,7 +32,14 @@ export default function AssessmentLobby() {
         .catch((e) => E(errorMessage(e))),
     [id],
   );
-  useSocket(useCallback(() => load(), [load]));
+  useSocket(useCallback((name) => {
+    load();
+    if (name === "ASSESSMENT_REOPENED") {
+      api.get("/auth/me").then(({ data }) => {
+        if (data.user) updateUserRef.current(data.user);
+      }).catch(() => {});
+    }
+  }, [load]));
   useEffect(() => {
     load();
     const t = setInterval(load, 5000);
@@ -39,6 +50,14 @@ export default function AssessmentLobby() {
       if (data.user) updateUser(data.user);
     }).catch(() => {});
   }, []);
+  useEffect(() => {
+    if (user?.closedAttempt) {
+      setClosedAttemptNotice(true);
+      R(false);
+    } else {
+      setClosedAttemptNotice(false);
+    }
+  }, [user?.closedAttempt]);
   useEffect(() => {
     if (a?.status === "SCHEDULED" && a.startTime && seconds === 0) load();
   }, [a?.status, a?.startTime, seconds, load]);
@@ -60,6 +79,10 @@ export default function AssessmentLobby() {
     }
   }
   async function start(automatic = false) {
+    if (user?.closedAttempt) {
+      setClosedAttemptNotice(true);
+      return;
+    }
     if (starting.current) return;
     starting.current = true;
     B(true);
@@ -155,7 +178,7 @@ export default function AssessmentLobby() {
                 <p className="notice">Return to fullscreen to join automatically. <Button onClick={() => prepare(true)}>Enter fullscreen</Button></p>
               )}
               <Button
-                disabled={!ready || a.status !== "LIVE" || busy}
+                disabled={!ready || a.status !== "LIVE" || busy || user?.closedAttempt}
                 onClick={() => start()}
               >
                 {busy
@@ -169,6 +192,12 @@ export default function AssessmentLobby() {
           {error && <p className="error">{error}</p>}
         </div>
       </main>
+      {closedAttemptNotice && (
+        <Modal title={user?.attemptStatus === "SUBMITTED" ? "Assessment already submitted" : "Assessment attempt closed"} onClose={() => setClosedAttemptNotice(false)}>
+          <p>Your attempt is already closed. Ask your teacher to restart it before trying again.</p>
+          <Button onClick={() => setClosedAttemptNotice(false)}>Okay</Button>
+        </Modal>
+      )}
     </>
   );
 }

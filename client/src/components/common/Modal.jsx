@@ -26,10 +26,10 @@ export default function Modal({ title, children, onClose, className = "" }) {
         aria-modal="true"
         aria-label={title}
       >
-        <div className="row between">
+        <div className="row between modal-heading">
           <h2>{title}</h2>
           {onClose && (
-            <button className="icon-btn" onClick={onClose} aria-label="Close">
+            <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close event history">
               <X size={18} strokeWidth={2.2} aria-hidden="true" />
             </button>
           )}

@@ -35,7 +35,8 @@ export default function Assessment() {
         D(d);
         if (initial) {
           A(d.attempt.answers || {});
-          C(examSections(d.assessment.questions)[0]?.indexes[0] ?? 0);
+          const savedQuestionIndex = d.assessment.questions.findIndex((question) => String(question._id) === String(d.attempt.currentQuestionId));
+          C(savedQuestionIndex >= 0 ? savedQuestionIndex : examSections(d.assessment.questions)[0]?.indexes[0] ?? 0);
         }
         if (d.attempt.status !== "ACTIVE")
           nav("/student/result/" + id, { replace: true });
@@ -48,7 +49,7 @@ export default function Assessment() {
   const connected = useSocket(
     useCallback(
       (name) => {
-        if (["ATTEMPT_UPDATE", "ASSESSMENT_ENDED"].includes(name)) refresh();
+        if (["ATTEMPT_UPDATE", "ASSESSMENT_ENDED", "ASSESSMENT_TIME_UPDATED", "ASSESSMENT_REOPENED"].includes(name)) refresh();
       },
       [refresh],
     ),
@@ -95,6 +96,11 @@ export default function Assessment() {
     A((old) => ({ ...old, [q._id]: answer }));
     save({ questionId: q._id, ...answer });
   }
+  function navigateToQuestion(index) {
+    C(index);
+    const question = data?.assessment.questions[index];
+    if (question) attemptService.progress(id, question._id).catch((e) => E(errorMessage(e)));
+  }
   async function submit() {
     try {
       await flush();
@@ -110,7 +116,7 @@ export default function Assessment() {
   return (
     <AssessmentContext.Provider value={{ assessment: a, attempt: t }}>
       <ExamWorkspace assessment={a} attempt={t} name={user.name} seconds={seconds}
-        connected={connected} answers={answers} current={current} onNavigate={C}
+        connected={connected} answers={answers} current={current} onNavigate={navigateToQuestion}
         change={change} status={status} attemptId={id} flush={flush}
         onSubmit={() => Confirm(true)} fullscreen={fs.fullscreen}
         onFullscreen={() => fs.enter().catch((e) => E(e.message))} error={error}>

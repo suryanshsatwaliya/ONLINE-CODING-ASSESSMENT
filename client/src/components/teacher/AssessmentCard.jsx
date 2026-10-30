@@ -8,7 +8,7 @@ export default function AssessmentCard({ assessment: a, onDeleted, onReuse }) {
     .map((value) => value ? new Date(value) : null)
     .find((value) => value && !Number.isNaN(value.getTime()));
   return (
-    <article className="ah-assessment-card">
+    <article className={`ah-assessment-card type-${a.type.toLowerCase()}`}>
       <Link to={"/teacher/assessments/" + a._id} className="ah-card-main">
       <div className="ah-card-top"><span className={`ah-type-icon type-${a.type.toLowerCase()}`}><Icon size={23} /></span><span className={`ah-status status-${a.status.toLowerCase()}`}><i />{labels[a.status] || a.status}</span></div>
       <span className="ah-card-type">{a.type === "MIXED" ? "QUIZ + CODING" : a.type === "CODING" ? "CODING ASSESSMENT" : "QUIZ ASSESSMENT"}</span>

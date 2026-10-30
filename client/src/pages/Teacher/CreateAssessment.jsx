@@ -152,7 +152,7 @@ export default function CreateAssessment() {
             <strong>Assessment controls</strong>
             <small>Manage the session and result visibility.</small>
             {form.status === "SCHEDULED" && form.startTime && <small>Starts automatically at {new Date(form.startTime).toLocaleString()}. Assign students and generate an access code before then.</small>}
-            {form.status === "LIVE" && form.closesAt && <small>Automatically ends at {new Date(form.closesAt).toLocaleString()}, or when all assigned students finish.</small>}
+            {form.status === "LIVE" && form.closesAt && <small>Ends automatically at {new Date(form.closesAt).toLocaleString()} when the allocated assessment time is over. You can also end it manually.</small>}
             {form.status === "ENDED" && form.endReason && <small>{form.endReason === "ALL_FINISHED" ? "Ended automatically: all assigned students finished." : form.endReason === "TIME_EXPIRED" ? "Ended automatically: assessment time expired." : "Ended by teacher."}</small>}
           </div>
           <div className="row">
@@ -340,7 +340,7 @@ export default function CreateAssessment() {
             />
           </div>
           <div className="assignment-list">
-            {students.map((s) => (
+            {[...students].sort((left, right) => String(left.uid || "").localeCompare(String(right.uid || ""), undefined, { numeric: true, sensitivity: "base" })).map((s) => (
               <label className="check" key={s._id}>
                 <input
                   type="checkbox"

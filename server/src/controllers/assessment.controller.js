@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { randomUUID } from "node:crypto";
-import { generateAssessmentCode, assessmentCodeKey } from "../services/assessmentCode.service.js";
+import { generateAssessmentCode, assessmentCodeKey, encryptAssessmentCode, decryptAssessmentCode } from "../services/assessmentCode.service.js";
 import { z } from "zod";
 import {
   Assessment,
@@ -203,6 +203,11 @@ export async function assignments(req, res) {
     ),
   );
 }
+export async function getAccessCode(req, res) {
+  const assessment = await ownAssessment(req.params.id, req.user);
+  const stored = await Assessment.findById(assessment._id).select("+accessCodeEncrypted");
+  res.json({ accessCode: stored?.accessCodeEncrypted ? decryptAssessmentCode(stored.accessCodeEncrypted) : null });
+}
 export async function accessCode(req, res) {
   await Assessment.init();
   const previous = await Assessment.findOne({ _id: req.params.id, createdBy: req.user.id, status: { $in: ["DRAFT", "SCHEDULED", "LIVE"] } }).select("+accessCodeKey");
@@ -214,7 +219,11 @@ export async function accessCode(req, res) {
     try {
       const a = await Assessment.findOneAndUpdate(
         { _id: req.params.id, createdBy: req.user.id, status: { $in: ["DRAFT", "SCHEDULED", "LIVE"] } },
-        { $set: { accessCodeHash: hash, accessCodeKey: assessmentCodeKey(code) } },
+        { $set: {
+          accessCodeHash: hash,
+          accessCodeKey: assessmentCodeKey(code),
+          accessCodeEncrypted: encryptAssessmentCode(code),
+        } },
       );
       if (!a) throw new ApiError(409, "Codes can only be generated for draft, scheduled or live assessments");
       return res.json({ accessCode: code });

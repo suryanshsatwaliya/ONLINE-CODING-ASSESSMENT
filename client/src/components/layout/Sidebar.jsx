@@ -32,7 +32,7 @@ export default function Sidebar() {
         Assess / Portal
       </div>
       <p className="nav-label">TEACHER WORKSPACE</p>
-      <nav>
+      <nav className="sidebar-nav-panel">
         {items.map(([path, label, Icon]) => (
           <NavLink key={path} to={"/teacher/" + path}>
             <Icon size={19} />
@@ -43,7 +43,7 @@ export default function Sidebar() {
       </nav>
       <div className="sidebar-footer">
         <p>Built for better assessments.</p>
-        <button
+        <button className="sidebar-logout"
           onClick={() => {
             logout();
             nav("/");

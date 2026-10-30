@@ -1,7 +1,7 @@
 import { updateAssessmentTiming } from "../../utils/assessmentTiming";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, ClipboardList, Code2, Layers3, Clock3, ShieldCheck, Users, BookOpen, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ClipboardList, Code2, Layers3, Clock3, ShieldCheck, Users, BookOpen, CheckCircle2 } from "lucide-react";
 import { api, errorMessage } from "../../services/api";
 import { useToast } from "../../components/common/Toast";
 import Input from "../../components/common/Input";
@@ -19,7 +19,7 @@ export default function NewAssessment() {
   const [sets, setSets] = useState([]), [bank, setBank] = useState([]), [students, setStudents] = useState([]);
   const [step, setStep] = useState(0), [loading, setLoading] = useState(true), [loadError, setLoadError] = useState("");
   const [error, setError] = useState(""), [saving, setSaving] = useState(false);
-  const [assigned, setAssigned] = useState([]), [studentSearch, setStudentSearch] = useState(""), [studentSection, setStudentSection] = useState("");
+  const [assigned, setAssigned] = useState([]), [studentSearch, setStudentSearch] = useState(""), [studentSections, setStudentSections] = useState([]);
   const pending = useRef(false), createdId = useRef(null), formElement = useRef(null), heading = useRef(null);
   const nav = useNavigate(), location = useLocation(), toast = useToast();
   const reuseSourceId = useRef(location.state?.reuseAssessmentId || null);
@@ -49,8 +49,11 @@ export default function NewAssessment() {
   const sections = [...new Set(students.map((student) => student.section).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const visibleStudents = students.filter((student) =>
-    (!studentSection || student.section === studentSection) &&
+    studentSections.includes(student.section) &&
     `${student.name} ${student.uid} ${student.course} ${student.section}`.toLowerCase().includes(studentSearch.toLowerCase()),
+  ).sort((left, right) => String(left.uid || "").localeCompare(String(right.uid || ""), undefined, { numeric: true, sensitivity: "base" }));
+  const toggleSectionFilter = (section) => setStudentSections((current) =>
+    current.includes(section) ? current.filter((item) => item !== section) : [...current, section],
   );
   const set = (key, value) => setForm((previous) => updateAssessmentTiming(previous, key, value));
   async function load() {
@@ -155,15 +158,19 @@ export default function NewAssessment() {
   if (loadError) return <div className="assessment-setup"><div className="as-panel as-loading" role="alert"><p>{loadError}</p><Button onClick={load}>Try again</Button></div></div>;
   return (
     <div className="assessment-setup">
-      <Link className="as-back" to="/teacher/assessments"><ArrowLeft size={16} /> All assessments</Link>
-      <header className="as-heading"><div><span className="ah-kicker">ASSESSMENT STUDIO</span><h1>{reuseSourceId.current ? "Reuse a completed assessment." : "Build your next challenge."}</h1><p>{reuseSourceId.current ? "Questions and rules are copied. Change the title and choose the students for this run." : "A few thoughtful choices. One great assessment."}</p></div><span className="as-draft-label">{createdId.current ? "Saved · finish setup" : reuseSourceId.current ? "Reusable copy" : "New assessment"}</span></header>
+      <div className="as-topline"><Link className="as-back" to="/teacher/assessments"><ArrowLeft size={16} /> All assessments</Link><span className="as-draft-label">{createdId.current ? "Saved · finish setup" : reuseSourceId.current ? "Reusable copy" : "New assessment"}</span></div>
+      <header className="as-heading"><div><span className="ah-kicker">ASSESSMENT STUDIO</span><h1>{reuseSourceId.current ? "Reuse assessment" : "Create assessment"}</h1><p>{reuseSourceId.current ? "Review the copied setup, choose students, and save your new run." : "Set the basics, choose questions, then review before saving."}</p></div></header>
       <nav className="as-steps" aria-label="Assessment setup steps">
         {steps.map((label, index) => <button type="button" key={label} disabled={saving} className={step === index ? "active" : step > index ? "complete" : ""} aria-current={step === index ? "step" : undefined} onClick={() => moveTo(index)}><span>{step > index ? <Check size={16} /> : `0${index + 1}`}</span><strong>{label}</strong></button>)}
       </nav>
+      <section className="as-summary-bar" aria-label="Assessment summary">
+        <div className="as-summary-bar-title"><span className={`ah-status status-${form.status.toLowerCase()}`}><i />{form.status === "DRAFT" ? "Draft" : "Scheduled"}</span><strong>{form.title || "Untitled assessment"}</strong></div>
+        <div className="as-summary-bar-stats"><span><strong>{total}</strong> questions</span><span><strong>{points}</strong> marks</span><span><strong>{form.duration || "—"}</strong> min</span></div>
+      </section>
       <div className="as-workspace">
         <form id="assessment-setup-form" ref={formElement} onSubmit={submit} className="as-main">
           <fieldset disabled={saving}>
-            <section className={`as-panel as-step-panel${step === 2 ? " as-rules-panel" : ""}`} key={step}>
+              <section className={`as-panel as-step-panel${step === 2 ? " as-rules-panel" : ""}${step === 3 ? " as-final-step" : ""}`} key={step}>
               <div className="as-panel-heading"><span className="as-section-number">STEP 0{step + 1}</span><h2 tabIndex={-1} ref={heading}>{["Let’s start with the basics", "Curate the right questions", "Set the ground rules", "One last look"][step]}</h2>{step !== 2 && <p>{["Give this assessment a name and choose how students will be challenged.", "Bring in content you’ve already prepared in the Question Bank.", "Choose the timing and controls that fit your classroom.", "Review your setup and choose who can take this assessment."][step]}</p>}</div>
               {step === 0 && <>
                 <Input label="Assessment title" placeholder="e.g. Data structures · Midterm quiz" required maxLength={200} value={form.title} onChange={(e) => set("title", e.target.value)} />
@@ -189,9 +196,10 @@ export default function NewAssessment() {
                 <div className="as-review-banner"><CheckCircle2 size={26} /><div><strong>{form.title}</strong><span>{form.type === "QUIZ" ? "Quiz" : form.type === "CODING" ? "Coding" : "Mixed"} · {total} questions · {form.duration} minutes</span></div><button type="button" onClick={() => moveTo(0)}>Edit</button></div>
                 <h3>Selected content</h3><div className="as-review-sets">{selectedSets.map((item) => <div key={item._id}><BookOpen size={17} /><span>{item.title}</span><small>{item.questionCount} questions</small></div>)}{!!form.questionIds.length && <div><BookOpen size={17} /><span>Individual bank questions</span><small>{form.questionIds.length} questions</small></div>}</div>
                 <div className="as-subheading"><Users size={19} /><h3>Assign students <span className="as-optional">Optional</span></h3></div><p className="as-help">Select students now, or assign them after saving.</p>
-                <div className="form-grid"><label className="field">Filter by section<select value={studentSection} onChange={(e) => setStudentSection(e.target.value)}><option value="">All sections</option>{sections.map((section) => <option key={section} value={section}>{section}</option>)}</select></label><label className="field">Search students<input aria-label="Search students to assign" placeholder="Name, UID or course…" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} /></label></div>
+                {!!sections.length && <details className="as-section-filter"><summary><span><strong>Filter by section</strong><small>{studentSections.length ? studentSections.join(", ") : "No section selected · choose sections to view students"}</small></span><ChevronDown size={17} /></summary><div className="as-section-filter-options"><button type="button" className="as-section-filter-action" onClick={() => setStudentSections(sections)}>Select all sections</button>{sections.map((section) => <label key={section} className={studentSections.includes(section) ? "is-selected" : ""}><input type="checkbox" checked={studentSections.includes(section)} onChange={() => toggleSectionFilter(section)} /><span>{section}</span></label>)}{studentSections.length > 0 && <button type="button" className="as-section-filter-clear" onClick={() => setStudentSections([])}>Clear section filter</button>}</div></details>}
+                <div className="form-grid as-student-search-grid"><label className="field">Search students<input aria-label="Search students to assign" placeholder="Name, UID or course…" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} /></label></div>
                 {!!visibleStudents.length && <div className="row wrap"><Button type="button" variant="secondary" onClick={() => setAssigned((previous) => [...new Set([...previous, ...visibleStudents.map((student) => student._id)])])}>Select all shown ({visibleStudents.length})</Button>{!!assigned.length && <Button type="button" variant="secondary" onClick={() => setAssigned([])}>Clear selection</Button>}</div>}
-                <div className="as-student-list">{visibleStudents.map((s) => <label key={s._id}><input type="checkbox" checked={assigned.includes(s._id)} onChange={(e) => setAssigned(e.target.checked ? [...assigned, s._id] : assigned.filter((id) => id !== s._id))} /><span><strong>{s.name}</strong><small>{s.uid} · {s.course} · {s.section}</small></span></label>)}{!students.length && <p>No students yet. You can assign them from the saved assessment later.</p>}{students.length > 0 && !visibleStudents.length && <p>No students match the current section and search.</p>}</div>
+                <div className="as-student-list">{visibleStudents.map((s) => <label key={s._id}><input type="checkbox" checked={assigned.includes(s._id)} onChange={(e) => setAssigned(e.target.checked ? [...assigned, s._id] : assigned.filter((id) => id !== s._id))} /><span><strong>{s.name}</strong><small>{s.uid} · {s.course} · {s.section}</small></span></label>)}{!students.length && <p>No students yet. You can assign them from the saved assessment later.</p>}{students.length > 0 && !studentSections.length && <p>Select a section above to view its students.</p>}{students.length > 0 && !!studentSections.length && !visibleStudents.length && <p>No students match the selected section and search.</p>}</div>
                 <p className="as-help">{assigned.length} students selected. Generate an access code after saving. A Scheduled assessment with a start time launches automatically once students are assigned and a code is ready.</p>
               </>}
               {error && <p className="notice error" role="alert">{error}</p>}
@@ -199,7 +207,6 @@ export default function NewAssessment() {
             </section>
           </fieldset>
         </form>
-        <aside className="as-summary"><div className="as-summary-top"><span className="ah-kicker">AT A GLANCE</span><span className={`ah-status status-${form.status.toLowerCase()}`}><i />{form.status === "DRAFT" ? "Draft" : "Scheduled"}</span></div><h3>{form.title || "Your next assessment"}</h3><p>{form.type === "MIXED" ? "Quiz & coding" : form.type === "QUIZ" ? "Quiz assessment" : "Coding assessment"}</p><div className="as-summary-numbers"><div><strong>{total}</strong><small>Questions</small></div><div><strong>{points}</strong><small>Base points</small></div><div><strong>{form.duration || "—"}</strong><small>Minutes</small></div></div><ul><li><BookOpen size={17} /><span>{selectedSets.length} saved sets selected</span></li><li><Users size={17} /><span>{assigned.length ? `${assigned.length} students selected` : "Assign students when ready"}</span></li><li><ShieldCheck size={17} /><span>{form.securitySettings.requireFullscreen ? "Fullscreen required" : "Fullscreen optional"}</span></li></ul><div className="as-summary-tip"><strong>Make it yours.</strong><p>Questions stay safely in your bank. This assessment gets its own copy.</p></div></aside>
       </div>
     </div>
   );

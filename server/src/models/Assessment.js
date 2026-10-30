@@ -22,6 +22,7 @@ export default model(
     securitySettings: Schema.Types.Mixed,
     accessCodeHash: { type: String, select: false },
     accessCodeKey: { type: String, select: false },
+    accessCodeEncrypted: { type: String, select: false },
     randomizeQuestions: Boolean,
     randomizeOptions: Boolean,
     publishResults: Boolean,

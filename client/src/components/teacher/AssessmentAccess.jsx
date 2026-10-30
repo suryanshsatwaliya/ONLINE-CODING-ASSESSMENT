@@ -1,17 +1,35 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Copy, KeyRound, RefreshCw } from "lucide-react";
 import { api, errorMessage } from "../../services/api";
 import Button from "../common/Button";
+import { cacheAssessmentCode, readCachedAssessmentCode } from "../../utils/assessmentAccessCode";
 
 export default function AssessmentAccess({ id, status }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false), [copied, setCopied] = useState(false), [error, setError] = useState("");
   const pending = useRef(false);
   const ended = status === "ENDED";
+  useEffect(() => {
+    let active = true;
+    setCode(readCachedAssessmentCode(id));
+    setCopied(false);
+    api.get(`/assessments/${id}/access-code`)
+      .then(({ data }) => {
+        if (!active || !data.accessCode) return;
+        setCode(data.accessCode);
+        cacheAssessmentCode(id, data.accessCode);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [id]);
   async function generate() {
     if (pending.current) return;
     pending.current = true; setBusy(true); setError(""); setCopied(false);
-    try { setCode((await api.post(`/assessments/${id}/access-code`)).data.accessCode); }
+    try {
+      const generated = (await api.post(`/assessments/${id}/access-code`)).data.accessCode;
+      setCode(generated);
+      cacheAssessmentCode(id, generated);
+    }
     catch (e) { setError(errorMessage(e)); }
     finally { pending.current = false; setBusy(false); }
   }

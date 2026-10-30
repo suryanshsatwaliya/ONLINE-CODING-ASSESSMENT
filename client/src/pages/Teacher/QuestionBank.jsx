@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Code2, Grid2X2, List, ListChecks, PencilLine, Trash2 } from "lucide-react";
 import { api, errorMessage } from "../../services/api";
 import { useToast } from "../../components/common/Toast";
 import Modal from "../../components/common/Modal";
@@ -7,12 +8,23 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 import CreateQuestionMenu from "../../components/teacher/CreateQuestionMenu";
 import Badge from "../../components/common/Badge";
 import QuestionBuilder from "../../components/teacher/QuestionBuilder";
+
+function setDescription(set) {
+  const description = set.description?.trim();
+  const boilerplate = /^a reusable (collection of coding problems|quiz, ready when you need it)\.?$/i;
+  if (description && !boilerplate.test(description)) return description;
+  return set.type === "CODING"
+    ? `Solve the ${set.title} challenge and validate your solution with its test cases.`
+    : "";
+}
+
 export default function QuestionBank() {
   const [rows, R] = useState([]),
     [sets, setSets] = useState([]),
     [q, Q] = useState(null),
     [search, S] = useState(""),
     [type, T] = useState(""),
+    [view, setView] = useState("grid"),
     [del, D] = useState(null);
   const toast = useToast();
   const [loading, setLoading] = useState(true);
@@ -46,7 +58,13 @@ export default function QuestionBank() {
           <h1>Question bank</h1>
           <p>Your reusable quizzes and coding sets. Create, edit and keep them here.</p>
         </div>
-        <CreateQuestionMenu />
+        <div className="question-bank-heading-actions">
+          <div className="question-bank-view-toggle" role="group" aria-label="Question Bank layout">
+            <button type="button" className={view === "grid" ? "is-active" : ""} aria-pressed={view === "grid"} onClick={() => setView("grid")} title="Grid view"><Grid2X2 size={16} /><span>Grid</span></button>
+            <button type="button" className={view === "list" ? "is-active" : ""} aria-pressed={view === "list"} onClick={() => setView("list")} title="List view"><List size={17} /><span>List</span></button>
+          </div>
+          <CreateQuestionMenu />
+        </div>
       </div>
       <div className="filters">
         <input
@@ -63,21 +81,29 @@ export default function QuestionBank() {
       </div>
       {loading && <p role="status">Loading your question bank…</p>}
       {loadError && <div className="notice error" role="alert">{loadError} <button onClick={load}>Retry</button></div>}
-      <div className="grid two">
+      <div className={`grid question-bank-grid${view === "list" ? " is-list" : ""}`}>
         {sets.filter((set) => (!type || set.type === type) && (set.title + " " + set.description).toLowerCase().includes(search.toLowerCase())).map((set) => (
-          <article className="card bank-set-card" key={set._id}>
-            <div className="row between"><Badge>{set.type === "QUIZ" ? "QUIZ · MCQ" : "CODING SET"}</Badge><small>{set.questionCount} questions</small></div>
-            <h2>{set.title}</h2>
-            <p>{set.description || (set.type === "QUIZ" ? "A reusable quiz, ready when you need it." : "A reusable collection of coding problems.")}</p>
-            <div className="row between wrap"><span className="muted">{set.totalMarks} points{!set.readyForAssessment && " · Needs hidden grading tests"}</span>
-              <div className="row"><Link to={"/teacher/questions/sets/" + set._id}>Edit {set.type === "QUIZ" ? "quiz" : "set"}</Link>
-                <button className="danger-text" onClick={() => D({ ...set, isSet: true })}>Delete</button></div>
+          <article className={`card bank-set-card ${set.type === "QUIZ" ? "is-quiz" : "is-coding"}`} key={set._id}>
+            <div className="bank-card-heading">
+              <span className="bank-card-icon">{set.type === "QUIZ" ? <ListChecks size={20} /> : <Code2 size={20} />}</span>
+              <Badge className={`bank-type-badge ${set.type === "QUIZ" ? "is-quiz" : "is-coding"}`}>{set.type === "QUIZ" ? "QUIZ · MCQ" : "CODING SET"}</Badge>
+              <span className="bank-question-count">{set.questionCount} {set.questionCount === 1 ? "question" : "questions"}</span>
+            </div>
+            <div className="bank-card-main">
+              <h2>{set.title}</h2>
+              {setDescription(set) && <p className="bank-card-description">{setDescription(set)}</p>}
+            </div>
+            <div className="bank-card-footer"><div className="bank-card-meta"><strong>{set.totalMarks}</strong><span>marks</span>{!set.readyForAssessment && <small>Needs hidden grading tests</small>}</div>
+              <div className="bank-card-actions">
+                <Link className="bank-action-edit" to={"/teacher/questions/sets/" + set._id}><PencilLine size={14} />Edit</Link>
+                <button className="bank-action-delete" onClick={() => D({ ...set, isSet: true })}><Trash2 size={14} />Delete</button>
+              </div>
             </div>
           </article>
         ))}
       </div>
       {!!rows.length && <h2 className="bank-legacy-heading">Individual questions</h2>}
-      <div className="grid two">
+      <div className={`grid question-bank-grid${view === "list" ? " is-list" : ""}`}>
         {rows
           .filter(
             (q) =>
@@ -87,18 +113,19 @@ export default function QuestionBank() {
               (!type || (type === "CODING" ? q.type === "CODING" : q.type !== "CODING")),
           )
           .map((q) => (
-            <div className="card" key={q._id}>
-              <div className="row between">
-                <Badge>{q.type}</Badge>
-                <span>{q.marks} marks</span>
+            <div className={`card bank-question-card ${q.type === "CODING" ? "is-coding" : "is-quiz"}`} key={q._id}>
+              <div className="bank-card-heading">
+                <span className="bank-card-icon">{q.type === "CODING" ? <Code2 size={20} /> : <ListChecks size={20} />}</span>
+                <Badge className={`bank-type-badge ${q.type === "CODING" ? "is-coding" : "is-quiz"}`}>{q.type === "CODING" ? "CODING" : "QUIZ · MCQ"}</Badge>
+                <span className="bank-question-count">{q.marks} marks</span>
               </div>
-              <h2>{q.title}</h2>
-              <p>{q.question || q.description}</p>
-              <div className="row">
-                <button onClick={() => Q(q)}>Edit question</button>
-                <button className="danger-text" onClick={() => D(q)}>
-                  Delete
-                </button>
+              <div className="bank-card-main">
+                <h2>{q.title}</h2>
+                {(q.question || q.description) && <p className="bank-card-description">{q.question || q.description}</p>}
+              </div>
+              <div className="bank-card-actions">
+                <button className="bank-action-edit" onClick={() => Q(q)}><PencilLine size={14} />Edit</button>
+                <button className="bank-action-delete" onClick={() => D(q)}><Trash2 size={14} />Delete</button>
               </div>
             </div>
           ))}

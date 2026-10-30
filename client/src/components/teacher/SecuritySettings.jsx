@@ -139,7 +139,19 @@ export default function SecuritySettings({ value, onChange }) {
       <div className={`security-event-settings${enabled ? " is-open" : ""}`} aria-hidden={!enabled} inert={!enabled}>
         <div className="security-event-content">
         <div className="security-event-global form-grid">
-          <label className="field">Maximum warnings<input type="number" min="1" max="100" value={value.maxWarnings ?? 1} onChange={(e) => set("maxWarnings", Number(e.target.value))} /></label>
+          <label className="field">Maximum warnings<input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={value.maxWarnings ?? 1}
+            onFocus={(e) => e.currentTarget.select()}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (!/^\d*$/.test(raw)) return;
+              set("maxWarnings", raw === "" ? "" : Number(raw));
+            }}
+            onBlur={() => { if (value.maxWarnings === "") set("maxWarnings", 1); }}
+          /></label>
           <div className="field"><span>At the warning limit</span><div className="security-warning-action"><strong>Submit &amp; grade</strong></div></div>
         </div>
         <div className="security-event-grid">

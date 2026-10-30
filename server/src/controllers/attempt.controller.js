@@ -16,7 +16,7 @@ import {
 import {
   closeAttempt,
   expireAttempts,
-  finishAssessmentIfReady,
+  endAssessmentIfDeadlineReached,
 } from "../services/attemptLifecycle.service.js";
 import { assessmentDeadline, assessmentAdmissionDeadline } from "../services/assessmentTiming.service.js";
 import { startScheduledAssessments } from "../services/assessmentSchedule.service.js";
@@ -176,7 +176,7 @@ export async function submit(req, res) {
     req.user,
     async (t, a, session) => closeAttempt(t, a, "SUBMITTED", session),
   );
-  await finishAssessmentIfReady(a._id);
+  await endAssessmentIfDeadlineReached(a._id);
   await gradeAttempt(t._id);
   emitAttempt(a, t);
   res.json({ status: t.status });

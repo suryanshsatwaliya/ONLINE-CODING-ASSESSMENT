@@ -16,6 +16,7 @@ r.put("/:id", objectIds, validate(assessmentSchema), c.update);
 r.delete("/:id", objectIds, c.remove);
 r.post("/:id/assign", objectIds, c.assign);
 r.get("/:id/assignments", objectIds, c.assignments);
+r.get("/:id/access-code", objectIds, c.getAccessCode);
 r.post("/:id/access-code", objectIds, c.accessCode);
 r.post("/:id/start", objectIds, c.start);
 r.post("/:id/end", objectIds, c.end);

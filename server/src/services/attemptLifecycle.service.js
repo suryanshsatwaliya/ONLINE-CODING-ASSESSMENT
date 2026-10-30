@@ -4,7 +4,6 @@ import {
   Assessment,
   CodeSubmission,
   ProctorEvent,
-  AssessmentStudent,
 } from "../models/index.js";
 import { randomUUID } from "node:crypto";
 import { gradeAttempt } from "./grading.service.js";
@@ -65,7 +64,7 @@ export async function closeAttempt(t, a, status, session) {
     { session },
   );
 }
-export async function finishAssessmentIfReady(id) {
+export async function endAssessmentIfDeadlineReached(id) {
   const closed = await mongoose.connection.transaction(async (session) => {
     let a = await Assessment.findOne({ _id: id, status: "LIVE" }).session(session);
     if (!a) return null;
@@ -77,28 +76,10 @@ export async function finishAssessmentIfReady(id) {
       a.admissionClosesAt ||= a.closesAt;
       await a.save({ session });
     }
-    const timedOut = assessmentDeadline(a) <= Date.now();
-    if (timedOut) {
-      // The shared assessment clock has closed, but a teacher may have granted
-      // selected students an individual extension. Keep the assessment open
-      // for their active attempts; admission is still closed by the original
-      // assessment deadline.
-      const individuallyExtendedAttempt = await Attempt.exists({
-        assessment: a._id,
-        status: "ACTIVE",
-        expiresAt: { $gt: new Date() },
-      }).session(session);
-      if (individuallyExtendedAttempt) return null;
-    }
-    if (!timedOut) {
-      const assigned = await AssessmentStudent.find({ assessment: a._id }).select("student").session(session);
-      if (!assigned.length) return null;
-      const finished = await Attempt.countDocuments({ assessment: a._id, student: { $in: assigned.map((row) => row.student) }, status: { $in: ["SUBMITTED", "EXPIRED", "TERMINATED"] } }).session(session);
-      if (finished !== assigned.length || await Attempt.exists({ assessment: a._id, status: "ACTIVE" }).session(session)) return null;
-    }
+    if (assessmentDeadline(a) > Date.now()) return null;
     // This write serializes automatic ending with saves, starts and submissions.
     a = await Assessment.findOneAndUpdate({ _id: a._id, status: "LIVE" }, {
-      $set: { status: "ENDED", endedAt: new Date(), endReason: timedOut ? "TIME_EXPIRED" : "ALL_FINISHED" },
+      $set: { status: "ENDED", endedAt: new Date(), endReason: "TIME_EXPIRED" },
       $inc: { revision: 1 },
     }, { session, new: true });
     const attempts = await Attempt.find({ assessment: a._id, status: "ACTIVE" }).session(session);
@@ -121,7 +102,7 @@ export async function expireAttempts() {
   await startScheduledAssessments();
   const now = new Date();
   const live = await Assessment.find({ status: "LIVE" }).select("_id");
-  for (const a of live) await finishAssessmentIfReady(a._id);
+  for (const a of live) await endAssessmentIfDeadlineReached(a._id);
   const endedIds = await Assessment.find({ status: "ENDED" }).distinct("_id");
   const candidates = await Attempt.find({
     status: "ACTIVE",
@@ -149,7 +130,7 @@ export async function expireAttempts() {
     if (out) {
       await gradeAttempt(out.t._id);
       emitAttempt(out.a, out.t);
-      await finishAssessmentIfReady(out.a._id);
+      await endAssessmentIfDeadlineReached(out.a._id);
     }
   }
 }

@@ -62,12 +62,6 @@ export default function Submissions() {
     return map;
   }, [codeSubmissions]);
 
-  useEffect(() => {
-    api.get("/assessments")
-      .then((response) => setAssessments(response.data))
-      .catch((error) => toast(errorMessage(error)));
-  }, []);
-
   async function loadAssessment(assessmentId = id) {
     if (!assessmentId) return;
     setLoading(true);
@@ -88,6 +82,26 @@ export default function Submissions() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!id) {
+      let active = true;
+      const refreshAssessmentChoices = () => api.get("/assessments")
+        .then(({ data }) => {
+          if (!active) return;
+          setAssessments(data);
+          const live = data
+            .filter((assessment) => assessment.status === "LIVE")
+            .sort((left, right) => new Date(right.startedAt || right.updatedAt || 0) - new Date(left.startedAt || left.updatedAt || 0));
+          if (live.length) setId(live[0]._id);
+        })
+        .catch((error) => { if (active) toast(errorMessage(error)); });
+      refreshAssessmentChoices();
+      const interval = setInterval(refreshAssessmentChoices, 10000);
+      return () => { active = false; clearInterval(interval); };
+    }
+    return undefined;
+  }, [id]);
 
   useEffect(() => {
     setStudents([]);

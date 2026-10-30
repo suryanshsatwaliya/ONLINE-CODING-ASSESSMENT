@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Check, Copy, KeyRound, Radio, RefreshCw } from "lucide-react";
 import { api, errorMessage } from "../../services/api";
 import { assessmentService } from "../../services/assessmentService";
 import { useToast } from "../../components/common/Toast";
@@ -8,7 +9,7 @@ import LiveStudentCard from "../../components/teacher/LiveStudentCard";
 import ViolationLog from "../../components/teacher/ViolationLog";
 import Modal from "../../components/common/Modal";
 import AssessmentPicker from "../../components/teacher/AssessmentPicker";
-import { Radio } from "lucide-react";
+import { cacheAssessmentCode, readCachedAssessmentCode } from "../../utils/assessmentAccessCode";
 export default function LiveMonitor() {
   const [assessments, A] = useState([]),
     [id, I] = useState(""),
@@ -16,9 +17,12 @@ export default function LiveMonitor() {
     [events, E] = useState(null),
     [restartTarget, setRestartTarget] = useState(null),
     [pendingTimeChange, setPendingTimeChange] = useState(null),
+    [accessCode, setAccessCode] = useState(""),
+    [accessCodeCopied, setAccessCodeCopied] = useState(false),
     [minutes, setMinutes] = useState(10),
     [selectedStudents, setSelectedStudents] = useState(() => new Set()),
     [monitorNow, setMonitorNow] = useState(Date.now()),
+    [refreshing, setRefreshing] = useState(false),
     [busy, setBusy] = useState(false);
   const selectedAssessment = assessments.find((assessment) => assessment._id === id);
   const isLive = selectedAssessment?.status === "LIVE";
@@ -45,27 +49,52 @@ export default function LiveMonitor() {
       return Promise.all([api.get("/assessments/" + id + "/monitor"), api.get("/assessments")])
         .then(([r, list]) => { R(r.data); A(list.data); })
         .catch((e) => toast(errorMessage(e)));
-    return Promise.resolve();
-  }, [id]);
-  const connected = useSocket(useCallback(() => load(), [load]));
-  useEffect(() => {
-    api
-      .get("/assessments")
-      .then((r) => {
-        A(r.data);
+    return api.get("/assessments")
+      .then(({ data }) => {
+        A(data);
+        const live = data
+          .filter((assessment) => assessment.status === "LIVE")
+          .sort((left, right) => new Date(right.startedAt || right.updatedAt || 0) - new Date(left.startedAt || left.updatedAt || 0));
+        if (live.length) I(live[0]._id);
       })
       .catch((e) => toast(errorMessage(e)));
-  }, []);
+  }, [id]);
+  const connected = useSocket(useCallback(() => load(), [load]));
+  async function refreshMonitor() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }
   useEffect(() => {
     if (!id) {
       R([]);
-      return undefined;
+      load();
+      const t = setInterval(load, 10000);
+      return () => clearInterval(t);
     }
     load();
     const t = setInterval(load, 10000);
     return () => clearInterval(t);
   }, [load]);
   useEffect(() => setSelectedStudents(new Set()), [id]);
+  useEffect(() => {
+    let active = true;
+    setAccessCode(readCachedAssessmentCode(id));
+    setAccessCodeCopied(false);
+    if (!id) return () => { active = false; };
+    api.get(`/assessments/${id}/access-code`)
+      .then(({ data }) => {
+        if (!active || !data.accessCode) return;
+        setAccessCode(data.accessCode);
+        cacheAssessmentCode(id, data.accessCode);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [id]);
   useEffect(() => {
     const interval = setInterval(() => setMonitorNow(Date.now()), 5000);
     return () => clearInterval(interval);
@@ -76,6 +105,14 @@ export default function LiveMonitor() {
       if (checked) next.add(studentId); else next.delete(studentId);
       return next;
     });
+  }
+  async function copyAccessCode() {
+    try {
+      await navigator.clipboard.writeText(accessCode);
+      setAccessCodeCopied(true);
+    } catch {
+      toast("Copy isn’t available. Select the code and copy it manually.");
+    }
   }
   function requestTimeExtension(scope, studentIds = []) {
     const amount = Number(minutes);
@@ -133,10 +170,16 @@ export default function LiveMonitor() {
           <h1>Live monitor</h1>
           <p>Observable events are signals, not proof of misconduct.</p>
         </div>
-        <span className="pill">
-          <span className="dot" />
-          {connected ? "Connected" : "Reconnecting…"}
-        </span>
+        <div className="row gap">
+          <Button variant="secondary" disabled={refreshing} onClick={refreshMonitor}>
+            <RefreshCw size={16} className={`monitor-refresh-icon${refreshing ? " spin" : ""}`} />
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </Button>
+          <span className="pill">
+            <span className="dot" />
+            {connected ? "Connected" : "Reconnecting…"}
+          </span>
+        </div>
       </div>
       <div className="monitor-assessment-picker">
         <AssessmentPicker assessments={assessments} value={id} onChange={I} ariaLabel="Select assessment to monitor" placeholder="Choose an assessment…" />
@@ -149,6 +192,12 @@ export default function LiveMonitor() {
         </div>
       ) : <>
       {selectedAssessment.status === "ENDED" && <p className="notice" role="status">This assessment has ended. Restarting a student will reopen it for that student only.</p>}
+      <section className="monitor-access-code" aria-label="Assessment access code">
+        <span className="monitor-access-code-icon"><KeyRound size={18} /></span>
+        <div className="monitor-access-code-copy"><small>STUDENT ACCESS CODE</small><strong>{accessCode || "Not available"}</strong></div>
+        <p>{accessCode ? "Share this code with students who need to join or restart." : "Generate a code from the assessment page. Previously generated codes will appear here once saved."}</p>
+        {accessCode && <Button type="button" variant="secondary" onClick={copyAccessCode}>{accessCodeCopied ? <Check size={15} /> : <Copy size={15} />}{accessCodeCopied ? "Copied" : "Copy code"}</Button>}
+      </section>
       <section className="monitor-time-controls" aria-label="Assessment time controls">
         <div>
           <h2>Adjust assessment time</h2>

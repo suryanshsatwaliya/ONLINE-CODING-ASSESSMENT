@@ -8,6 +8,8 @@ function labelFor(assessment) {
 
 export default function AssessmentPicker({ assessments = [], value = "", onChange, ariaLabel = "Select assessment", placeholder = "Choose an assessment…" }) {
   const [open, setOpen] = useState(false);
+  const [opensUp, setOpensUp] = useState(false);
+  const [optionsMaxHeight, setOptionsMaxHeight] = useState(608);
   const [query, setQuery] = useState("");
   const rootRef = useRef(null);
   const searchRef = useRef(null);
@@ -16,6 +18,12 @@ export default function AssessmentPicker({ assessments = [], value = "", onChang
 
   useEffect(() => {
     if (!open) return undefined;
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    root.style.overflow = "hidden";
+    body.style.overflow = "hidden";
     const onPointerDown = (event) => {
       if (!rootRef.current?.contains(event.target)) setOpen(false);
     };
@@ -28,8 +36,25 @@ export default function AssessmentPicker({ assessments = [], value = "", onChang
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
+      root.style.overflow = previousRootOverflow;
+      body.style.overflow = previousBodyOverflow;
     };
   }, [open]);
+
+  function togglePicker() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const bounds = rootRef.current?.getBoundingClientRect();
+    const below = bounds ? window.innerHeight - bounds.bottom - 20 : window.innerHeight;
+    const above = bounds ? bounds.top - 20 : 0;
+    const shouldOpenUp = below < 700 && above >= below;
+    const availableSpace = Math.max(160, (shouldOpenUp ? above : below) - 100);
+    setOpensUp(shouldOpenUp);
+    setOptionsMaxHeight(Math.min(608, availableSpace));
+    setOpen(true);
+  }
 
   function choose(assessmentId) {
     onChange(assessmentId);
@@ -45,18 +70,18 @@ export default function AssessmentPicker({ assessments = [], value = "", onChang
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        onClick={togglePicker}
       >
         <span className={selected ? "" : "is-placeholder"}>{selected ? labelFor(selected) : placeholder}</span>
         <ChevronDown size={18} aria-hidden="true" />
       </button>
       {open && (
-        <div className="assessment-picker-popover">
+        <div className={`assessment-picker-popover${opensUp ? " opens-up" : ""}`}>
           <label className="assessment-picker-search">
             <Search size={16} aria-hidden="true" />
             <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search assessments" aria-label="Search assessments" />
           </label>
-          <div className="assessment-picker-options" role="listbox" aria-label={ariaLabel}>
+          <div className="assessment-picker-options" style={{ maxHeight: `${optionsMaxHeight}px` }} role="listbox" aria-label={ariaLabel}>
             <button type="button" role="option" aria-selected={!value} className={`assessment-picker-option${!value ? " is-selected" : ""}`} onClick={() => choose("")}>
               <span>{placeholder}</span>{!value && <Check size={16} aria-hidden="true" />}
             </button>

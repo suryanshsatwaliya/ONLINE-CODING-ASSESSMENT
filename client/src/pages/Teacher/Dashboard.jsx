@@ -56,11 +56,10 @@ export default function Dashboard() {
   ];
   return (
     <>
-      <div className="page-title">
+      <div className="page-title dashboard-heading">
         <div>
-          <span className="eyebrow">YOUR TEACHING, AT A GLANCE</span>
           <h1>Welcome back, {user.name.split(" ")[0]}.</h1>
-          <p>Everything you need for a productive assessment day.</p>
+          <p>Your assessments and student progress, in one place.</p>
         </div>
         <div className="row wrap"><Link className="btn secondary" to="/teacher/exam-preview">Preview exam interface</Link>
         <Link className="btn" to="/teacher/assessments/new">
@@ -68,36 +67,23 @@ export default function Dashboard() {
         </Link>
         </div>
       </div>
-      <div className="dashboard-banner">
-        <div>
-          <span className="eyebrow">MAKE EVERY ASSESSMENT COUNT</span>
-          <h2>A clearer picture of student progress.</h2>
-          <p>
-            From the first question to the final submission — all in one place.
-          </p>
-        </div>
-        <div className="banner-art">
-          <BarChart3 size={70} />
-        </div>
-      </div>
-      <div className="stats">
+      <div className="stats dashboard-stats">
         {stats.map(([label, value, Icon]) => (
-          <div className="stat card" key={label}>
+          <div className="stat card dashboard-stat" key={label}>
             <div className="row between">
               <span>{label}</span>
               <Icon size={19} />
             </div>
             <strong>{value}</strong>
-            <small>Current workspace</small>
           </div>
         ))}
       </div>
-      <div className="row between">
-        <h2>Recent assessments</h2>
+      <div className="row between dashboard-section-heading">
+        <div><span className="eyebrow">WORKSPACE</span><h2>Recent assessments</h2></div>
         <Link to="/teacher/assessments">View all →</Link>
       </div>
-      <div className="grid two">
-        {a.slice(0, 4).map((x) => (
+      <div className="grid three dashboard-assessments">
+        {a.slice(0, 6).map((x) => (
           <AssessmentCard assessment={x} key={x._id} onReuse={setReuseId} onDeleted={(id) => D((previous) => ({ ...previous, assessments: previous.assessments.filter((item) => item._id !== id) }))} />
         ))}
       </div>
@@ -106,8 +92,11 @@ export default function Dashboard() {
           Your next great assessment starts here. Create one above.
         </div>
       )}
-      <div className="grid two">
-        <div className="card">
+      <div className="row between dashboard-section-heading dashboard-overview-heading">
+        <div><span className="eyebrow">LATEST ACTIVITY</span><h2>Workspace overview</h2></div>
+      </div>
+      <div className="grid three dashboard-overview">
+        <div className="card dashboard-widget">
           <h2>Recent submissions</h2>
           {r
             .sort((x, y) => new Date(y.gradedAt) - new Date(x.gradedAt))
@@ -123,7 +112,7 @@ export default function Dashboard() {
             ))}
           {!r.length && <p>No submissions yet.</p>}
         </div>
-        <div className="card">
+        <div className="card dashboard-widget">
           <h2>Upcoming assessments</h2>
           {a
             .filter((x) => x.status === "SCHEDULED")
@@ -138,11 +127,13 @@ export default function Dashboard() {
                 </small>
               </div>
             ))}
-          <h3>Active students</h3>
-          <p>
-            {data.students.filter((s) => s.status === "ACTIVE").length}{" "}
-            authorized student accounts
-          </p>
+        </div>
+        <div className="card dashboard-widget dashboard-active-students">
+          <span className="eyebrow">STUDENT ACCOUNTS</span>
+          <strong>{data.students.filter((student) => student.status === "ACTIVE").length}</strong>
+          <h2>Active students</h2>
+          <p>Authorized accounts in your workspace.</p>
+          <Link to="/teacher/students">Manage students →</Link>
         </div>
       </div>
       {reuseId && <ReuseAssessmentModal assessmentId={reuseId} onClose={() => setReuseId(null)} onCreated={async (newId) => {

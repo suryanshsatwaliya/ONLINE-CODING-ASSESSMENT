@@ -63,6 +63,12 @@ const questionFields = z
       .max(20)
       .default([]),
     starterCode: z.record(z.string().max(50000)).default({}),
+    executionConfig: z.object({
+      mode: z.enum(["LEETCODE", "STDIO"]),
+      methodName: z.string().max(100).default(""),
+      params: z.array(z.object({ name: z.string().max(100), type: z.string().min(1).max(100) })).max(20).default([]),
+      returnType: z.string().max(100).optional(),
+    }).optional(),
     supportedLanguages: z
       .array(z.enum(["c", "cpp", "java", "python", "javascript"]))
       .default(["python", "cpp", "java", "javascript", "c"]),
@@ -104,11 +110,15 @@ function validateQuestion(q, ctx, requireHidden = true) {
       (typeof q.correctAnswer !== "string" || !q.correctAnswer.trim())
     )
       err("Short answer needs a reference answer");
-    if (
-      q.type === "CODING" &&
-      ((requireHidden && !q.testCases.some((t) => t.hidden)) || !q.supportedLanguages.length)
-    )
-      err("Coding questions require hidden tests and a language");
+    if (q.type === "CODING") {
+      const completeProgram = q.executionConfig?.mode === "STDIO";
+      if ((requireHidden && !completeProgram && !q.testCases.some((t) => t.hidden)) ||
+          (completeProgram && !q.testCases.some((t) => !t.hidden)) ||
+          !q.supportedLanguages.length)
+        err(completeProgram
+          ? "Complete-program questions require a visible sample test and a language"
+          : "Method-style coding questions require hidden grading tests and a language");
+    }
 }
 export const questionSchema = questionFields.superRefine(validateQuestion);
 export const bankQuestionSchema = questionFields.superRefine((q, ctx) => {

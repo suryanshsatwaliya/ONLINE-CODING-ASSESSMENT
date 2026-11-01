@@ -9,6 +9,9 @@ import {
   Code2,
   Github,
   GraduationCap,
+  LockKeyhole,
+  Eye,
+  ClipboardCheck,
   ShieldCheck,
 } from "lucide-react";
 import Navbar from "../../components/layout/Navbar";
@@ -30,6 +33,24 @@ const features = [
     icon: Activity,
     title: "Teacher analytics",
     description: "Review submissions and follow class progress from a clear, practical dashboard.",
+  },
+];
+
+const safeguards = [
+  {
+    icon: LockKeyhole,
+    title: "Teacher-controlled rules",
+    description: "Choose fullscreen, clipboard, and browser-activity rules for each assessment.",
+  },
+  {
+    icon: Eye,
+    title: "Live class oversight",
+    description: "See student progress, submissions, remaining time, and recorded assessment events.",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Clear, reviewable results",
+    description: "Bring quiz answers and coding submissions together for a practical teacher review.",
   },
 ];
 
@@ -136,18 +157,50 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        <section className="landing-safeguards" id="security">
+          <div className="landing-safeguards-heading">
+            <span className="landing-section-kicker">DESIGNED FOR THE CLASSROOM</span>
+            <h2>Structure for teachers. Focus for students.</h2>
+            <p>Set expectations before an assessment, then follow progress and review work in one place.</p>
+          </div>
+          <div className="landing-safeguards-grid">
+            {safeguards.map(({ icon: Icon, title, description }, index) => (
+              <article className="landing-safeguard-card" key={title}>
+                <span className="landing-safeguard-icon"><Icon size={19} /></span>
+                <div>
+                  <span className="landing-safeguard-index">0{index + 1}</span>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="landing-safeguards-note">Browser monitoring only reports activity the browser can observe; it cannot reliably identify or block installed extensions.</p>
+        </section>
       </main>
       <footer className="landing-footer-redesign">
-        <Link to="/" className="landing-footer-brand"><span className="brand-icon"><ShieldCheck size={18} /></span> Assess / Portal</Link>
-        <span>Built to help classrooms learn with confidence.</span>
-        <div className="landing-footer-developer">
-          <span className="landing-developer-label">DEVELOPER</span>
-          <strong>Suryansh Satwaliya</strong>
-          <a href="https://github.com/suryanshsatwaliya" target="_blank" rel="noopener noreferrer">
-            <Github size={14} aria-hidden="true" /> View GitHub Profile
-          </a>
+        <div className="landing-footer-main">
+          <div className="landing-footer-about">
+            <Link to="/" className="landing-footer-brand"><span className="brand-icon"><ShieldCheck size={19} /></span> Assess <i>/</i> Portal</Link>
+            <p>One thoughtful workspace to create assessments, solve coding challenges, and understand student progress.</p>
+          </div>
+          <div className="landing-footer-links">
+            <strong>Explore</strong>
+            <a href="#features">Platform features</a>
+            <a href="#security">Assessment safeguards</a>
+            <Link to="/login/student">Student login</Link>
+            <Link to="/login/teacher">Teacher workspace</Link>
+          </div>
+          <div className="landing-footer-developer">
+            <span className="landing-developer-label">BUILT BY</span>
+            <strong>Suryansh Satwaliya</strong>
+            <a href="https://github.com/suryanshsatwaliya" target="_blank" rel="noopener noreferrer">
+              <Github size={15} aria-hidden="true" /> View GitHub Profile <ArrowUpRight size={13} />
+            </a>
+          </div>
         </div>
-        <Link to="/login/teacher">For teachers <ArrowUpRight size={15} /></Link>
+        <div className="landing-footer-bottom"><span>Built to help classrooms learn with confidence.</span><span>© {new Date().getFullYear()} Assess / Portal</span></div>
       </footer>
     </div>
   );

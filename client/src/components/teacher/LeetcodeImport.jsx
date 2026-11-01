@@ -17,7 +17,13 @@ export default function LeetcodeImport({ value, onChange, onBusy, onImported }) 
     setWarnings([]);
     try {
       const { data } = await api.post("/questions/import/leetcode", { reference });
-      onChange({ ...value, ...data.question });
+      onChange({
+        ...value,
+        ...data.question,
+        executionConfig: data.question.executionConfig || {
+          mode: "LEETCODE", methodName: "", params: [], returnType: "",
+        },
+      });
       onImported?.(data.question);
       setWarnings(data.warnings || []);
     } catch (e) {

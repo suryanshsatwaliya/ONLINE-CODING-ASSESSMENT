@@ -54,6 +54,12 @@ export default function QuestionBuilder({ value: q, onChange, onSubmit, embedded
               onChange({
                 ...q,
                 type: e.target.value,
+                ...(e.target.value === "CODING"
+                  ? {
+                      executionConfig: q.executionConfig || { mode: "LEETCODE", methodName: "", params: [], returnType: "" },
+                      supportedLanguages: q.supportedLanguages.filter((language) => language !== "c"),
+                    }
+                  : { executionConfig: undefined }),
                 correctAnswer: e.target.value === "SHORT" ? "" : [0],
                 options:
                   e.target.value === "TRUE_FALSE"

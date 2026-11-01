@@ -1,16 +1,18 @@
 export default function Console({ result }) {
   if (!result) return null;
   return (
-    <div className="console">
+    <div className="coding-result-list" aria-label="Test case results">
       {result?.results?.map((r, i) => (
-        <section key={i}>
-          <strong>
-            Case {i + 1} · {r.status}
-          </strong>
-          <pre>{r.compileOutput || r.stderr || r.stdout || "(no output)"}</pre>
-          <small>
-            {r.time || "—"} s · {r.memory || "—"} KB
-          </small>
+        <section className={`coding-result-case${r.passed ? " is-passed" : " is-failed"}`} key={i}>
+          <div className="coding-result-case-heading">
+            <span className="coding-result-icon" aria-hidden="true">{r.passed ? "✓" : "×"}</span>
+            <strong>Test case {i + 1} {r.passed ? "passed" : "failed"}</strong>
+            {!result.hidden && r.status && <small>{r.status}</small>}
+          </div>
+          {!result.hidden && (r.compileOutput || r.stderr || r.stdout) && (
+            <pre>{r.compileOutput || r.stderr || r.stdout}</pre>
+          )}
+          {!result.hidden && <small className="coding-result-metrics">{r.time || "—"} s · {r.memory || "—"} KB</small>}
         </section>
       ))}
     </div>

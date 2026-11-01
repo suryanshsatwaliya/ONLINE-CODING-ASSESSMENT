@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, KeyRound, Radio, RefreshCw } from "lucide-react";
+import { Check, CirclePlay, CircleStop, Copy, KeyRound, Radio, RefreshCw } from "lucide-react";
 import { api, errorMessage } from "../../services/api";
 import { assessmentService } from "../../services/assessmentService";
 import { useToast } from "../../components/common/Toast";
@@ -17,6 +17,7 @@ export default function LiveMonitor() {
     [events, E] = useState(null),
     [restartTarget, setRestartTarget] = useState(null),
     [pendingTimeChange, setPendingTimeChange] = useState(null),
+    [pendingMonitorAction, setPendingMonitorAction] = useState(""),
     [accessCode, setAccessCode] = useState(""),
     [accessCodeCopied, setAccessCodeCopied] = useState(false),
     [minutes, setMinutes] = useState(10),
@@ -137,6 +138,31 @@ export default function LiveMonitor() {
       setBusy(false);
     }
   }
+  async function confirmMonitorAction() {
+    if (!id || !pendingMonitorAction || busy) return;
+    setBusy(true);
+    try {
+      if (pendingMonitorAction === "start") {
+        await assessmentService.start(id);
+        toast("Assessment started.", { success: true });
+      } else if (pendingMonitorAction === "end") {
+        await assessmentService.end(id);
+        toast("Assessment ended.", { success: true });
+      } else {
+        const { data } = await assessmentService.regenerateAccessCode(id);
+        setAccessCode(data.accessCode);
+        setAccessCodeCopied(false);
+        cacheAssessmentCode(id, data.accessCode);
+        toast("Student access code regenerated.", { success: true });
+      }
+      setPendingMonitorAction("");
+      await load();
+    } catch (e) {
+      toast(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function restartAttempt(mode) {
     if (!restartTarget) return;
     setBusy(true);
@@ -171,6 +197,28 @@ export default function LiveMonitor() {
           <p>Observable events are signals, not proof of misconduct.</p>
         </div>
         <div className="row gap">
+          {selectedAssessment && ["DRAFT", "SCHEDULED"].includes(selectedAssessment.status) && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="monitor-session-control is-start"
+              title={selectedAssessment.startTime && new Date(selectedAssessment.startTime) > new Date() ? "Assessment is scheduled to start later" : "Start assessment"}
+              aria-label="Start assessment"
+              disabled={busy || Boolean(selectedAssessment.startTime && new Date(selectedAssessment.startTime) > new Date())}
+              onClick={() => setPendingMonitorAction("start")}
+            ><CirclePlay size={19} /></Button>
+          )}
+          {isLive && (
+            <Button
+              type="button"
+              variant="danger"
+              className="monitor-session-control is-end"
+              title="End assessment"
+              aria-label="End assessment"
+              disabled={busy}
+              onClick={() => setPendingMonitorAction("end")}
+            ><CircleStop size={19} /></Button>
+          )}
           <Button variant="secondary" disabled={refreshing} onClick={refreshMonitor}>
             <RefreshCw size={16} className={`monitor-refresh-icon${refreshing ? " spin" : ""}`} />
             {refreshing ? "Refreshing…" : "Refresh"}
@@ -196,7 +244,10 @@ export default function LiveMonitor() {
         <span className="monitor-access-code-icon"><KeyRound size={18} /></span>
         <div className="monitor-access-code-copy"><small>STUDENT ACCESS CODE</small><strong>{accessCode || "Not available"}</strong></div>
         <p>{accessCode ? "Share this code with students who need to join or restart." : "Generate a code from the assessment page. Previously generated codes will appear here once saved."}</p>
-        {accessCode && <Button type="button" variant="secondary" onClick={copyAccessCode}>{accessCodeCopied ? <Check size={15} /> : <Copy size={15} />}{accessCodeCopied ? "Copied" : "Copy code"}</Button>}
+        <div className="monitor-access-code-actions">
+          {accessCode && <Button type="button" variant="secondary" onClick={copyAccessCode}>{accessCodeCopied ? <Check size={15} /> : <Copy size={15} />}{accessCodeCopied ? "Copied" : "Copy code"}</Button>}
+          {["DRAFT", "SCHEDULED", "LIVE"].includes(selectedAssessment.status) && <Button type="button" variant="secondary" className="monitor-icon-button" title="Regenerate student access code" aria-label="Regenerate student access code" disabled={busy} onClick={() => setPendingMonitorAction("regenerate")}><RefreshCw size={16} /></Button>}
+        </div>
       </section>
       <section className="monitor-time-controls" aria-label="Assessment time controls">
         <div>
@@ -253,6 +304,26 @@ export default function LiveMonitor() {
           <div className="restart-attempt-options">
             <Button variant="secondary" disabled={busy} onClick={() => setPendingTimeChange(null)}>Cancel</Button>
             <Button disabled={busy} onClick={confirmTimeExtension}>{busy ? "Adding time…" : "Confirm and add time"}</Button>
+          </div>
+        </Modal>
+      )}
+      {pendingMonitorAction && (
+        <Modal
+          title={pendingMonitorAction === "start" ? "Start this assessment?" : pendingMonitorAction === "end" ? "End this assessment?" : "Regenerate access code?"}
+          onClose={() => !busy && setPendingMonitorAction("")}
+        >
+          <p>
+            {pendingMonitorAction === "start"
+              ? "Students assigned to this assessment will be able to begin. The assessment timer will start now."
+              : pendingMonitorAction === "end"
+              ? "This ends the assessment now and submits active student attempts. This cannot be undone."
+              : "A new student access code will be generated. The current code will stop working immediately."}
+          </p>
+          <div className="restart-attempt-options">
+            <Button variant="secondary" disabled={busy} onClick={() => setPendingMonitorAction("")}>Cancel</Button>
+            <Button variant={pendingMonitorAction === "end" ? "danger" : ""} disabled={busy} onClick={confirmMonitorAction}>
+              {busy ? "Please wait…" : pendingMonitorAction === "start" ? "Start assessment" : pendingMonitorAction === "end" ? "End assessment" : "Regenerate code"}
+            </Button>
           </div>
         </Modal>
       )}

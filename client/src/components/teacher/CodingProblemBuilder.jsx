@@ -1,9 +1,157 @@
 import { useEffect, useState } from "react";
 import Input from "../common/Input";
+
+const BLOCK_TAGS = new Set(["P", "DIV", "LI", "UL", "OL", "H1", "H2", "H3", "H4", "PRE"]);
+
+function splitParameterTypes(value) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    if (value[index] === "<") depth++;
+    else if (value[index] === ">") depth = Math.max(0, depth - 1);
+    else if (value[index] === "," && depth === 0) {
+      parts.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts.push(value.slice(start).trim());
+  return parts.filter(Boolean);
+}
+
+function readMathNode(node) {
+  const tag = node.tagName?.toLowerCase();
+  const children = [...node.childNodes].map(readClipboardNode).join("");
+  const baseTag = tag?.replace(/^mjx-/, "");
+  if (["msup", "msub", "mfrac"].includes(baseTag)) {
+    const parts = [...node.childNodes].map(readClipboardNode);
+    if (baseTag === "msup") return `${parts[0] || ""}^${parts[1] || ""}`;
+    if (baseTag === "msub") return `${parts[0] || ""}_${parts[1] || ""}`;
+    return `(${parts[0] || ""})/(${parts[1] || ""})`;
+  }
+  if (["math", "mrow", "semantics", "mstyle"].includes(tag)) return children;
+  if (["annotation", "annotation-xml"].includes(tag)) return "";
+  if (["mi", "mn", "mo", "mtext"].includes(tag)) return node.textContent || "";
+  return children;
+}
+
+function readClipboardNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
+  if (node.nodeType !== Node.ELEMENT_NODE) return "";
+  const tag = node.tagName.toLowerCase();
+  if (node.getAttribute("aria-hidden") === "true") return "";
+  if (
+    tag === "mjx-assistive-mml" ||
+    node.classList?.contains("katex-html") ||
+    node.classList?.contains("katex-mathml")
+  ) return "";
+  if (["script", "style", "annotation", "annotation-xml"].includes(tag)) return "";
+  if (tag === "math" || tag.startsWith("mjx-")) return readMathNode(node);
+  if (node.classList?.contains("katex")) {
+    const math = node.querySelector(".katex-mathml math");
+    if (math) return readMathNode(math);
+  }
+  if (tag === "br") return "\n";
+  if (tag === "sup") return `^${[...node.childNodes].map(readClipboardNode).join("")}`;
+  if (tag === "sub") return `_${[...node.childNodes].map(readClipboardNode).join("")}`;
+  const content = [...node.childNodes].map(readClipboardNode).join("");
+  if (tag === "li") return `• ${content.trim()}\n`;
+  if (BLOCK_TAGS.has(node.tagName)) return `\n${content.trim()}\n`;
+  return content;
+}
+
+function normalizePastedText(event) {
+  const clipboard = event.clipboardData;
+  const html = clipboard?.getData("text/html");
+  let pasted = clipboard?.getData("text/plain") || "";
+
+  if (html && typeof DOMParser !== "undefined") {
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const richText = [...parsed.body.childNodes].map(readClipboardNode).join("");
+    if (richText.trim()) pasted = richText;
+  }
+
+  pasted = pasted
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u200b-\u200f\ufeff]/g, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\t ]+\n/g, "\n")
+    .replace(/\n[\t ]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  // Some math renderers put each glyph on its own line in text/plain.
+  // Rejoin those fragments while keeping paragraph and bullet boundaries.
+  const lines = pasted.split("\n");
+  const fixed = [];
+  let fragments = [];
+  const flushFragments = () => {
+    if (!fragments.length) return;
+    const hasGlyphBreaks = fragments.filter((line) => [...line.trim()].length === 1).length >= 3;
+    if (hasGlyphBreaks) {
+      let line = "";
+      for (const token of fragments.map((part) => part.trim()).filter(Boolean)) {
+        if (/^[≤≥<>!=]$/.test(token)) line = `${line.trimEnd()} ${token} `;
+        else if (/^[A-Za-z]$/.test(token) && /[A-Za-z]$/.test(line)) line += token;
+        else if (/^\d$/.test(token) && /\d$/.test(line)) line += `^${token}`;
+        else line += `${line && !/[\s]$/.test(line) ? " " : ""}${token}`;
+      }
+      const compact = line.replace(/\s+/g, "");
+      // Some rendered equations are copied twice: once as positioned glyphs,
+      // then again as an accessible text string. Drop an adjacent duplicate.
+      let deduplicated = line.trim();
+      for (let split = Math.ceil(compact.length / 2); split >= 3; split--) {
+        const left = compact.slice(0, split);
+        const right = compact.slice(split);
+        if (left === right && /[≤≥<>^_=]/.test(left)) {
+          deduplicated = left.replace(/([≤≥<>])/g, " $1 ").replace(/\s+/g, " ").trim();
+          break;
+        }
+      }
+      fixed.push(deduplicated);
+    } else fixed.push(...fragments);
+    fragments = [];
+  };
+  for (const line of lines) {
+    if (!line.trim()) {
+      flushFragments();
+      if (fixed.length && fixed.at(-1) !== "") fixed.push("");
+      continue;
+    }
+    if (/^\s*[•●▪*-]\s*/.test(line)) {
+      flushFragments();
+      fragments.push(line.replace(/^\s*[•●▪*-]\s*/, ""));
+      flushFragments();
+      continue;
+    }
+    fragments.push(line);
+  }
+  flushFragments();
+  return fixed.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 export default function CodingProblemBuilder({ value: q, onChange }) {
   const set = (k, v) => onChange({ ...q, [k]: v });
+  const handleFormattedPaste = (event, key) => {
+    const pasted = normalizePastedText(event);
+    if (!pasted) return;
+    event.preventDefault();
+    const target = event.currentTarget;
+    const start = target.selectionStart ?? target.value.length;
+    const end = target.selectionEnd ?? start;
+    const next = `${target.value.slice(0, start)}${pasted}${target.value.slice(end)}`;
+    set(key, next);
+    requestAnimationFrame(() => {
+      const cursor = start + pasted.length;
+      target.setSelectionRange(cursor, cursor);
+    });
+  };
   const languages = ["python", "javascript", "cpp", "java", "c"];
   const labels = { python: "Python", javascript: "JavaScript", cpp: "C++", java: "Java", c: "C" };
+  const methodStyle = q.executionConfig?.mode !== "STDIO";
+  const executionConfig = q.executionConfig || { mode: "LEETCODE", methodName: "", params: [], returnType: "" };
+  const parameterTypes = (executionConfig.params || []).map((param) => param.type).join(", ");
+  const displayedTestCases = methodStyle ? q.testCases : q.testCases.slice(0, 1);
   const [activeLanguage, setActiveLanguage] = useState(() =>
     q.supportedLanguages.includes("python") ? "python" : q.supportedLanguages[0] || "python",
   );
@@ -22,12 +170,72 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
                 rows={k === "description" ? 6 : 3}
                 required={k === "description"}
                 value={q[k]}
+                onPaste={(event) => handleFormattedPaste(event, k)}
                 onChange={(e) => set(k, e.target.value)}
               />
             </label>
           ),
         )}
       </div>
+      <label className="field coding-execution-mode">
+        Code submission style
+        <select
+          value={methodStyle ? "LEETCODE" : "STDIO"}
+          onChange={(event) => {
+            if (event.target.value === "LEETCODE") {
+              const compatibleLanguages = q.supportedLanguages.filter((language) => language !== "c");
+              onChange({
+                ...q,
+                supportedLanguages: compatibleLanguages.length ? compatibleLanguages : ["cpp"],
+                executionConfig: { mode: "LEETCODE", methodName: "", params: [], returnType: "" },
+              });
+              if (activeLanguage === "c") setActiveLanguage(compatibleLanguages[0] || "cpp");
+            } else {
+              const testCases = q.testCases.length
+                ? [{ ...q.testCases[0], hidden: false }]
+                : [{ input: "", expectedOutput: "", hidden: false, weight: 1 }];
+              onChange({ ...q, testCases, executionConfig: { ...executionConfig, mode: "STDIO" } });
+            }
+          }}
+        >
+          <option value="STDIO">Complete program (stdin / stdout)</option>
+          <option value="LEETCODE">LeetCode method (class Solution)</option>
+        </select>
+        <small>Method style is the default and wraps a class Solution method for Judge0. Complete-program mode grades only the first visible sample case; hidden cases are ignored.</small>
+      </label>
+      {methodStyle && <div className="coding-execution-config">
+        <label className="field">
+          Solution method name (optional)
+          <input
+            value={executionConfig.methodName || ""}
+            placeholder="e.g. twoSum"
+            maxLength={100}
+            onChange={(event) => set("executionConfig", { ...executionConfig, methodName: event.target.value })}
+          />
+        </label>
+        <label className="field">
+          Parameter types in method order (optional)
+          <input
+            value={parameterTypes}
+            placeholder="e.g. integer[], integer"
+            onChange={(event) => set("executionConfig", {
+              ...executionConfig,
+              params: splitParameterTypes(event.target.value).map((type, index) => ({ name: `arg${index + 1}`, type })).filter((param) => param.type),
+            })}
+          />
+          <small>Leave blank to infer types from the method signature. Separate parameters with commas; nested types are supported, for example <code>integer, pair&lt;integer,integer&gt;[]</code> for <code>int n, vector&lt;pair&lt;int,int&gt;&gt;&amp; vehicles</code>.</small>
+        </label>
+        <label className="field">
+          Return type
+          <input
+            value={executionConfig.returnType || ""}
+            placeholder="e.g. integer[] or void"
+            maxLength={100}
+            onChange={(event) => set("executionConfig", { ...executionConfig, returnType: event.target.value })}
+          />
+          <small>Use <code>void</code> when the method updates its input argument in place.</small>
+        </label>
+      </div>}
       <details className="question-extra">
       <summary>Languages, starter code & execution settings</summary>
       <div className="form-grid">
@@ -79,6 +287,7 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
                     type="checkbox"
                     aria-label={`${enabled ? "Disable" : "Enable"} ${labels[language]}`}
                     checked={enabled}
+                    disabled={methodStyle && language === "c"}
                     onChange={(e) => set(
                       "supportedLanguages",
                       e.target.checked
@@ -162,9 +371,11 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
       </button>
       <h3>Test cases</h3>
       <p className="muted">
-        Visible cases are used for Run Code. Add at least one hidden grading case before using this problem in an assessment.
+        {methodStyle
+          ? "Enter one JSON argument per line, in method parameter order. For int n and vector<pair<int,int>>& vehicles, enter 3 on line 1 and [[100,160],[200,350],[1300,100]] on line 2. Do not enter stdin-only count/value lines. Expected output should be JSON (for example, [30,50,110]). Add at least one hidden grading case before using this problem in an assessment."
+          : "Enter the complete program's stdin in each visible sample case and its expected stdout. Students use Run & grade; only the first visible sample case determines marks. Hidden cases are ignored."}
       </p>
-      {q.testCases.map((t, i) => (
+      {displayedTestCases.map((t, i) => (
         <div className="test-builder" key={i}>
           <div className="form-grid">
             <label className="field">
@@ -197,7 +408,7 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
             </label>
           </div>
           <div className="row">
-            <label className="check">
+            {methodStyle && <label className="check">
               <input
                 type="checkbox"
                 checked={t.hidden}
@@ -211,8 +422,8 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
                 }
               />
               Hidden
-            </label>
-            <Input
+            </label>}
+            {methodStyle && <Input
               label="Weight"
               type="number"
               min="1"
@@ -225,8 +436,8 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
                   ),
                 )
               }
-            />
-            <button
+            />}
+            {methodStyle && <button
               type="button"
               onClick={() =>
                 set(
@@ -236,21 +447,21 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
               }
             >
               Remove
-            </button>
+            </button>}
           </div>
         </div>
       ))}
-      <button
+      {methodStyle && <button
         type="button"
         onClick={() =>
           set("testCases", [
             ...q.testCases,
-            { input: "", expectedOutput: "", hidden: true, weight: 1 },
+            { input: "", expectedOutput: "", hidden: methodStyle, weight: 1 },
           ])
         }
       >
         + Add test case
-      </button>
+      </button>}
     </>
   );
 }

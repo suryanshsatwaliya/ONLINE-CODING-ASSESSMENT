@@ -7,4 +7,7 @@ export const assessmentService = {
   remove: (id) => api.delete("/assessments/" + id),
   extendMonitorTime: (id, data) => api.post(`/assessments/${id}/monitor/time`, data),
   restartStudentAttempt: (id, studentId, mode) => api.post(`/assessments/${id}/monitor/students/${studentId}/restart`, { mode }),
+  regenerateAccessCode: (id) => api.post(`/assessments/${id}/access-code`),
+  start: (id) => api.post(`/assessments/${id}/start`),
+  end: (id) => api.post(`/assessments/${id}/end`),
 };

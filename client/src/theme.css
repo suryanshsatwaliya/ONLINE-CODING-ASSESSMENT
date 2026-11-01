@@ -68,6 +68,10 @@ body::before {
 /* Common surfaces and controls, used by both teacher and student pages. */
 html[data-theme="dark"] body { background:var(--page); color:var(--ink); }
 html[data-theme="dark"] :is(.card,.sidebar,.modal,.portal-card,.set-save-bar,.assessment-menu-options,.assessment-question-editor,.entry-form,.assessment-access,.ah-metric,.ah-search,.ah-assessment-card,.as-steps,.as-panel,.as-summary) { background:var(--surface); border-color:var(--line); }
+html[data-theme="dark"] .submission-details-modal > .modal-heading { background:var(--surface); border-color:var(--line); }
+html[data-theme="dark"] .submission-details-scroll { scrollbar-color:#5d6679 transparent; }
+html[data-theme="dark"] .submission-details-scroll::-webkit-scrollbar-thumb { background:#5d6679; background-clip:padding-box; }
+html[data-theme="dark"] .submission-details-scroll::-webkit-scrollbar-thumb:hover { background:#78839a; background-clip:padding-box; }
 html[data-theme="dark"] .workspace-header { background:#1a2132e6; border-color:var(--line); }
 html[data-theme="dark"] .landing { background:radial-gradient(ellipse at 50% 32%,#55449a24,transparent 55%),var(--page); }
 html[data-theme="dark"] .portal-card.teacher { background:#292540; border-color:#50466d; }
@@ -115,6 +119,10 @@ html[data-theme="dark"] .submission-search input { color:var(--ink); }
 html[data-theme="dark"] .submission-detail-tabs { background:var(--surface-soft); border-color:var(--line); }
 html[data-theme="dark"] .submission-detail-tabs button.active { background:var(--surface); border-color:var(--line); color:var(--accent); }
 html[data-theme="dark"] :is(.submission-question-detail,.submission-code-version,.submission-answer-option) { background:var(--surface); border-color:var(--line); }
+html[data-theme="dark"] .submission-coding-question { background:var(--surface-soft); border-color:var(--line); }
+html[data-theme="dark"] .submission-coding-question-content { border-color:var(--line); }
+html[data-theme="dark"] .submission-coding-question summary::before { background:var(--surface); border-color:var(--line); }
+html[data-theme="dark"] .submission-coding-question summary:hover::before { background:var(--surface-soft); border-color:#625a91; }
 html[data-theme="dark"] .submission-code-prompt-details > div { background:var(--surface-soft); border-color:var(--line); }
 html[data-theme="dark"] .submission-code-prompt-details strong { color:var(--ink); }
 html[data-theme="dark"] :is(.submission-question-detail h3,.submission-answer-option p,.submission-written-answer p,.submission-code-version-heading strong,.submission-execution-summary strong,.submission-test-result summary,.submission-ai-review > .row strong) { color:var(--ink); }
@@ -129,6 +137,9 @@ html[data-theme="dark"] .submission-test-result { border-color:var(--line); }
 html[data-theme="dark"] .submission-test-result pre { border-color:var(--line); }
 html[data-theme="dark"] .submission-datetime time:first-child { color:var(--ink); }
 html[data-theme="dark"] :is(.hero h1 > span,.entry-welcome h1 span,.entry-eyebrow,.entry-code-input,.access-code-display.ready,.result-score,.lobby-countdown strong,.bank-set-card a,.back-link,.source-reference a,.as-back,.ah-kicker,.ah-card-footer strong) { color:var(--accent); }
+html[data-theme="dark"] .question-set-studio .back-link-card { border-color:#4c4576; background:linear-gradient(115deg,#20283b 0%,#292544 34%,#37305c 55%,#25243b 78%,#20283b 100%); background-size:220% 220%; box-shadow:0 7px 20px #090b1880; color:#c5bbff; }
+html[data-theme="dark"] .question-set-studio .back-link-card:hover { border-color:#8173d5; box-shadow:0 11px 25px #080a177a; }
+html[data-theme="dark"] .question-set-studio .back-link-icon { border-color:#51497e; background:#302b50; color:#c5bbff; }
 html[data-theme="dark"] :is(.question-tools button:hover,.assessment-menu-options > a:hover,.assessment-menu-options > a:focus-visible) { background:var(--accent-soft); }
 html[data-theme="dark"] .entry-how > span { background:var(--surface); color:var(--accent); border-color:var(--line); }
 html[data-theme="dark"] .entry-form .entry-code-input { background:var(--accent-soft); color:var(--accent); }
@@ -198,6 +209,24 @@ html[data-theme="dark"] :is(.card,.modal,.sidebar,.entry-form,.assessment-access
   background-color:var(--surface);
 }
 html[data-theme="dark"] .workspace-header { background:#141c2ee8; }
+html[data-theme="dark"] .workspace-header-redesign {
+  background: radial-gradient(ellipse at 14% 0%, #51458e60, transparent 43%), radial-gradient(ellipse at 88% 100%, #58459355, transparent 46%), linear-gradient(108deg, #211e38 0%, #202238 48%, #292342 100%);
+  border-color: #3a3658;
+  box-shadow: 0 8px 24px #06081238, 0 1px 0 #ffffff08 inset;
+}
+html[data-theme="dark"] .workspace-header-redesign::before {
+  background: radial-gradient(ellipse at 14% 50%, #8d7aed38 0%, transparent 34%), radial-gradient(ellipse at 78% 50%, #7461c344 0%, transparent 39%), radial-gradient(ellipse at 48% 8%, #51458e60, transparent 44%);
+}
+html[data-theme="dark"] .workspace-context-icon { border-color:#4a4372; background:linear-gradient(145deg,#302b50,#39315e); color:#c1b8ff; }
+html[data-theme="dark"] .workspace-context-label strong,
+html[data-theme="dark"] .workspace-user-copy strong { color:var(--ink); }
+html[data-theme="dark"] .workspace-context-label,
+html[data-theme="dark"] .workspace-context-role,
+html[data-theme="dark"] .workspace-user-copy small { color:var(--muted); }
+html[data-theme="dark"] .workspace-context-divider { color:#777394; }
+html[data-theme="dark"] .workspace-user { border-color:#393650; background:linear-gradient(115deg,#20263a,#292441); }
+html[data-theme="dark"] .workspace-user .avatar { background:linear-gradient(145deg,#38325d,#47406d); color:#d2cbff; }
+html[data-theme="dark"] .workspace-header-actions .theme-toggle { background:var(--surface); }
 html[data-theme="dark"] :is(.page-title h1,.dashboard-section-heading h2,.dashboard-widget h2,.assessment-hub h1,.assessment-setup h1,.assessment-setup h2,.assessment-setup h3,.teacher-login-story h1,.entry-welcome h1,.entry-form h2,.submission-results-toolbar h2,.submission-empty-state h2) { color:var(--ink); }
 html[data-theme="dark"] :is(.page-title p,.dashboard-heading p,.dashboard-widget p,.stat .row,.stat small,.teacher-login-intro,.teacher-login-points,.entry-welcome > p,.entry-form > p,.assessment-setup .as-help,.assessment-setup .field,.submission-results-toolbar p) { color:var(--muted); }
 html[data-theme="dark"] :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea,.ah-search) { border-color:var(--line); background-color:var(--surface-soft); color:var(--ink); }

@@ -82,7 +82,7 @@ export default function AssessmentQuestionPicker({ sets, bank, form, onChange, o
             <input type="checkbox" checked={selected} disabled={!set.readyForAssessment && !retained}
               onChange={(e) => toggle("questionSetIds", set._id, e.target.checked)} />
             <span><strong>{set.title}</strong><small>{set.questionCount} questions · {set.totalMarks != null ? `${set.totalMarks} points · ` : ""}{set.type === "QUIZ" ? "Quiz" : "Coding"}</small>
-              {!set.readyForAssessment && !retained && <small>Each coding question needs a hidden grading test. Save the tests in Question Bank, then click Refresh here.</small>}
+              {!set.readyForAssessment && !retained && <small>Add the grading test cases required by this question set in Question Bank, then click Refresh here.</small>}
             </span><Badge>{set.type}</Badge>
           </label>;
         })}

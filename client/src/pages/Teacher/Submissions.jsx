@@ -307,7 +307,7 @@ export default function Submissions() {
       )}
 
       {detail && (
-        <Modal title={`${detail.attempt.student.name} · Submission details`} onClose={() => setDetail(null)}>
+        <Modal className="submission-details-modal" title={`${detail.attempt.student.name} · Submission details`} onClose={() => setDetail(null)}>
           {detail.assessment.questions.some((question) => question.type !== "CODING") && detail.assessment.questions.some((question) => question.type === "CODING") && (
             <div className="submission-detail-tabs" role="tablist" aria-label="Submission details type">
               <button type="button" role="tab" aria-selected={detailTab === "QUIZ"} className={detailTab === "QUIZ" ? "active" : ""} onClick={() => setDetailTab("QUIZ")}>Quiz answers</button>
@@ -343,49 +343,55 @@ export default function Submissions() {
           {(detailTab === "CODING" || !detail.assessment.questions.some((question) => question.type !== "CODING")) && detail.assessment.questions.filter((question) => question.type === "CODING").map((question, index) => {
             const questionSubmissions = (detail.submissions || [])
               .filter((submission) => String(submission.questionId) === String(question._id))
-              .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
+              .sort((left, right) =>
+                new Date(right.createdAt) - new Date(left.createdAt) ||
+                String(right._id).localeCompare(String(left._id)),
+              );
+            const latestSubmission = questionSubmissions[0];
             const savedCode = detail.attempt.answers?.[question._id]?.value;
+            const latestExecution = latestSubmission && (detail.executions || []).find((record) => String(record.submission?._id || record.submission) === String(latestSubmission._id));
+            const latestReview = latestSubmission && (detail.reviews || []).find((record) => String(record.submission?._id || record.submission) === String(latestSubmission._id));
+            const latestPassed = latestExecution?.results?.filter((test) => test.passed).length || 0;
             return (
               <article className="submission-question-detail" key={question._id}>
-                <div className="submission-question-kicker"><span>CODING QUESTION {index + 1}</span><span>{formatMarks(question.marks)} marks</span></div>
-                <h3>{question.title}</h3>
-                <p className="submission-question-prompt preserve">{question.description || question.question}</p>
-                {(question.constraints || question.inputFormat || question.outputFormat || question.examples?.length > 0) && <div className="submission-code-prompt-details">
-                  {question.constraints && <div><strong>Constraints</strong><p className="preserve">{question.constraints}</p></div>}
-                  {question.inputFormat && <div><strong>Input format</strong><p className="preserve">{question.inputFormat}</p></div>}
-                  {question.outputFormat && <div><strong>Output format</strong><p className="preserve">{question.outputFormat}</p></div>}
-                  {question.examples?.map((example, exampleIndex) => <div key={exampleIndex}><strong>Example {exampleIndex + 1}</strong><pre>Input: {example.input}{"\n"}Output: {example.output}{example.explanation ? `\nExplanation: ${example.explanation}` : ""}</pre></div>)}
+                <details className="submission-coding-question">
+                  <summary>
+                    <span className="submission-question-kicker"><span>CODING QUESTION {index + 1}</span><span>{formatMarks(question.marks)} marks</span></span>
+                    <strong>{question.title}</strong>
+                  </summary>
+                  <div className="submission-coding-question-content">
+                    <p className="submission-question-prompt preserve">{question.description || question.question}</p>
+                    {(question.constraints || question.inputFormat || question.outputFormat || question.examples?.length > 0) && <div className="submission-code-prompt-details">
+                      {question.constraints && <div><strong>Constraints</strong><p className="preserve">{question.constraints}</p></div>}
+                      {question.inputFormat && <div><strong>Input format</strong><p className="preserve">{question.inputFormat}</p></div>}
+                      {question.outputFormat && <div><strong>Output format</strong><p className="preserve">{question.outputFormat}</p></div>}
+                      {question.examples?.map((example, exampleIndex) => <div key={exampleIndex}><strong>Example {exampleIndex + 1}</strong><pre>Input: {example.input}{"\n"}Output: {example.output}{example.explanation ? `\nExplanation: ${example.explanation}` : ""}</pre></div>)}
+                    </div>}
+                  </div>
+                </details>
+                {!latestSubmission && savedCode?.code && <div className="submission-code-version"><div className="row between"><strong>Latest saved code</strong><span>{savedCode.language}</span></div><pre>{savedCode.code}</pre></div>}
+                {!latestSubmission && !savedCode?.code && <p className="muted">No code was saved for this question.</p>}
+                {latestSubmission && <div className="submission-code-version">
+                  <div className="submission-code-version-heading"><div><strong>Latest submission</strong><small>{latestSubmission.language} · {new Date(latestSubmission.createdAt).toLocaleString()}</small></div><Badge>{latestSubmission.status}</Badge></div>
+                  <pre>{latestSubmission.code}</pre>
+                  {latestSubmission.error && <p className="error">{latestSubmission.error}</p>}
+                  {latestExecution && <div className="submission-execution-summary"><strong>{latestPassed} / {latestExecution.results.length} tests passed</strong><span>{formatMarks(latestExecution.score ?? latestSubmission.score)} marks</span></div>}
+                  {latestExecution?.results?.map((test, testIndex) => <details className="submission-test-result" key={testIndex}><summary><span className={test.passed ? "is-passed" : "is-failed"}>{test.passed ? "Passed" : "Failed"}</span>Test case {testIndex + 1}</summary><pre>{JSON.stringify(test, null, 2)}</pre></details>)}
+                  {latestSubmission.status === "ERROR" && <Button variant="secondary" onClick={() => retryCodeJob(latestSubmission)}>Retry code job</Button>}
+                  <div className="submission-ai-review">
+                    <div className="row between"><strong>AI review</strong>{latestReview && <Badge>{latestReview.status}</Badge>}</div>
+                    {latestReview ? (
+                      <>
+                        {latestReview.review?.feedback && <p>{latestReview.review.feedback}</p>}
+                        {latestReview.error && <p className="error">{latestReview.error}</p>}
+                        <div className="form-grid submission-ai-scores">
+                          {[ ["qualityScore", "Quality marks"], ["efficiencyScore", "Efficiency marks"] ].map(([key, label]) => <label className="field" key={key}>{label}<input type="number" min="0" step=".1" value={(aiDrafts[latestReview._id] || latestReview)[key] ?? 0} onChange={(event) => setAiDrafts((drafts) => ({ ...drafts, [latestReview._id]: { ...(drafts[latestReview._id] || latestReview), [key]: event.target.value } }))} /></label>)}
+                        </div>
+                        <div className="row wrap"><Button onClick={() => saveAiReview(latestReview, "APPROVED")}>Approve / save marks</Button><Button variant="secondary" onClick={() => saveAiReview(latestReview, "REJECTED")}>Reject review</Button></div>
+                      </>
+                    ) : <Button variant="secondary" onClick={() => requestAiReview(latestSubmission)}>Request optional AI review</Button>}
+                  </div>
                 </div>}
-                {savedCode?.code && (!questionSubmissions.length || savedCode.code !== questionSubmissions[0].code || savedCode.language !== questionSubmissions[0].language) && <div className="submission-code-version"><div className="row between"><strong>Latest saved code</strong><span>{savedCode.language}</span></div><pre>{savedCode.code}</pre></div>}
-                {!questionSubmissions.length && !savedCode?.code && <p className="muted">No code was saved for this question.</p>}
-                {questionSubmissions.map((submission, versionIndex) => {
-                  const execution = (detail.executions || []).find((record) => String(record.submission?._id || record.submission) === String(submission._id));
-                  const aiReview = (detail.reviews || []).find((record) => String(record.submission?._id || record.submission) === String(submission._id));
-                  const passed = execution?.results?.filter((test) => test.passed).length || 0;
-                  return (
-                    <div className="submission-code-version" key={submission._id}>
-                      <div className="submission-code-version-heading"><div><strong>{versionIndex === 0 ? "Latest submission" : `Previous submission ${versionIndex}`}</strong><small>{submission.language} · {new Date(submission.createdAt).toLocaleString()}</small></div><Badge>{submission.status}</Badge></div>
-                      <pre>{submission.code}</pre>
-                      {submission.error && <p className="error">{submission.error}</p>}
-                      {execution && <div className="submission-execution-summary"><strong>{passed} / {execution.results.length} tests passed</strong><span>{formatMarks(execution.score ?? submission.score)} marks</span></div>}
-                      {execution?.results?.map((test, testIndex) => <details className="submission-test-result" key={testIndex}><summary><span className={test.passed ? "is-passed" : "is-failed"}>{test.passed ? "Passed" : "Failed"}</span>Test case {testIndex + 1}</summary><pre>{JSON.stringify(test, null, 2)}</pre></details>)}
-                      {submission.status === "ERROR" && <Button variant="secondary" onClick={() => retryCodeJob(submission)}>Retry code job</Button>}
-                      <div className="submission-ai-review">
-                        <div className="row between"><strong>AI review</strong>{aiReview && <Badge>{aiReview.status}</Badge>}</div>
-                        {aiReview ? (
-                          <>
-                            {aiReview.review?.feedback && <p>{aiReview.review.feedback}</p>}
-                            {aiReview.error && <p className="error">{aiReview.error}</p>}
-                            <div className="form-grid submission-ai-scores">
-                              {[ ["qualityScore", "Quality marks"], ["efficiencyScore", "Efficiency marks"] ].map(([key, label]) => <label className="field" key={key}>{label}<input type="number" min="0" step=".1" value={(aiDrafts[aiReview._id] || aiReview)[key] ?? 0} onChange={(event) => setAiDrafts((drafts) => ({ ...drafts, [aiReview._id]: { ...(drafts[aiReview._id] || aiReview), [key]: event.target.value } }))} /></label>)}
-                            </div>
-                            <div className="row wrap"><Button onClick={() => saveAiReview(aiReview, "APPROVED")}>Approve / save marks</Button><Button variant="secondary" onClick={() => saveAiReview(aiReview, "REJECTED")}>Reject review</Button></div>
-                          </>
-                        ) : <Button variant="secondary" onClick={() => requestAiReview(submission)}>Request optional AI review</Button>}
-                      </div>
-                    </div>
-                  );
-                })}
               </article>
             );
           })}

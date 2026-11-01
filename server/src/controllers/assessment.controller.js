@@ -48,7 +48,7 @@ async function payload(body, user, previous = null) {
     } else {
       const set = sets.find((set) => String(set._id) === id);
       if (!set) throw new ApiError(422, "A selected question set is unavailable");
-      if (!set.readyForAssessment) throw new ApiError(422, `${set.title}: add hidden grading tests in the Question Bank before using this set.`);
+      if (!set.readyForAssessment) throw new ApiError(422, `${set.title}: add the required grading test cases in the Question Bank before using this set.`);
       questions.push(...set.questions.map((q) => ({ ...q, sourceSetId: set._id })));
       questionSets.push({ setId: set._id, title: set.title, type: set.type, questionCount: set.questionCount });
     }

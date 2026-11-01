@@ -120,6 +120,7 @@ export default function TeacherLogin() {
     <main className="teacher-login-page">
       <div className="teacher-login-layout">
         <section className="teacher-login-story">
+          <Link className="teacher-login-back portal-return-link" to="/"><ArrowLeft size={16} /> Back to portals</Link>
           <span className="teacher-login-kicker"><Sparkles size={15} /> YOUR CLASSROOM, IN FOCUS</span>
           <h1>Turn good questions into <span>great progress.</span></h1>
           <p className="teacher-login-intro">Create thoughtful assessments, bring coding practice into class, and see how every student is doing.</p>
@@ -178,7 +179,6 @@ export default function TeacherLogin() {
           <Button type="submit" disabled={busy || !captchaConfig || captchaConfig.unavailable || (captchaConfig.enabled && !captchaToken)}>
             {busy ? "Signing in…" : <>Teacher Login <ArrowRight size={17} /></>}
           </Button>
-          <Link className="teacher-login-back" to="/"><ArrowLeft size={15} /> Back to portals</Link>
         </form>
       </div>
     </main>

@@ -8,7 +8,10 @@ function payload(body) {
     title: body.title, description: body.description, type: body.type, questions,
     questionCount: questions.length,
     totalMarks: questions.reduce((sum, q) => sum + q.marks, 0),
-    readyForAssessment: questions.every((q) => q.type !== "CODING" || q.testCases.some((t) => t.hidden)),
+    readyForAssessment: questions.every((q) => q.type !== "CODING" ||
+      (q.executionConfig?.mode === "STDIO"
+        ? q.testCases.some((t) => !t.hidden)
+        : q.testCases.some((t) => t.hidden))),
   };
 }
 export async function list(req, res) {

@@ -264,6 +264,24 @@
 .coding-console-resize:hover { color:#6558ca; background:#f0edff; }
 .coding-console-content { overflow:auto; padding:10px 12px; overscroll-behavior:contain; }
 .coding-console-content .error,.coding-console-content .notice { margin:0 0 8px; }
+.coding-program-output { display:grid; gap:10px; }
+.coding-program-output section { min-width:0; padding:12px 14px; border:1px solid var(--em-border); border-radius:10px; background:#f6f7fb; }
+.coding-program-output section.coding-program-expected { background:linear-gradient(110deg,#f8f9fc,#f0f2f8); }
+.coding-program-output section.coding-program-actual.is-match { border-color:#83c99f; background:linear-gradient(110deg,#f1fbf5,#e1f5e8); box-shadow:inset 4px 0 0 #48a873; }
+.coding-program-output section.coding-program-actual.is-mismatch { border-color:#e1a19d; background:linear-gradient(110deg,#fff7f5,#fbe9e7); box-shadow:inset 4px 0 0 #cf665f; }
+.coding-program-output strong { display:block; margin-bottom:7px; color:var(--em-ink); font-size:12px; }
+.coding-program-output pre { max-height:220px; margin:0; padding:10px 12px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; border-radius:7px; background:#f0f3f9; color:#33425b; font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace; }
+.coding-program-output section.coding-program-actual.is-match pre { background:linear-gradient(110deg,#e6f5eb,#d8efdf); color:#285842; }
+.coding-program-output section.coding-program-actual.is-mismatch pre { background:linear-gradient(110deg,#fbe9e7,#f5dcda); color:#803c3a; }
+.coding-program-error { margin:0; padding:10px 12px; border:1px solid #efc6c6; border-radius:9px; background:#fff1f1; color:#a33d3d; white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }
+.exam-modern[data-theme="dark"] .coding-program-output section { background:#222c40; border-color:var(--em-border); }
+.exam-modern[data-theme="dark"] .coding-program-output section.coding-program-expected { background:linear-gradient(110deg,#222c40,#29344a); }
+.exam-modern[data-theme="dark"] .coding-program-output section.coding-program-actual.is-match { background:linear-gradient(110deg,#1b342d,#224235); border-color:#4d946e; box-shadow:inset 4px 0 0 #58b27e; }
+.exam-modern[data-theme="dark"] .coding-program-output section.coding-program-actual.is-mismatch { background:linear-gradient(110deg,#39272c,#482c32); border-color:#99575c; box-shadow:inset 4px 0 0 #d36f70; }
+.exam-modern[data-theme="dark"] .coding-program-output pre { background:#2a354a; color:#d7deeb; }
+.exam-modern[data-theme="dark"] .coding-program-output section.coding-program-actual.is-match pre { background:linear-gradient(110deg,#244537,#2b5140); color:#c9efd7; }
+.exam-modern[data-theme="dark"] .coding-program-output section.coding-program-actual.is-mismatch pre { background:linear-gradient(110deg,#4a3035,#57343a); color:#ffd1cd; }
+.exam-modern[data-theme="dark"] .coding-program-error { background:#452932; border-color:#85515f; color:#ffc0cc; }
 .exam-modern[data-theme="dark"] .coding-console-panel { background:#1a2132; border-color:var(--em-border); }
 .exam-modern[data-theme="dark"] .coding-console-header,.exam-modern[data-theme="dark"] .coding-console-resize { background:#222c40; }
 .exam-modern[data-theme="dark"] .coding-console-header button { color:#d6dcee; }
@@ -302,15 +320,44 @@
 .coding-output-tabs { display:flex; align-self:stretch; align-items:stretch; gap:5px; }
 .coding-output-tabs button { display:inline-flex; align-items:center; gap:7px; padding:0 10px; color:#718097; font-size:12px; }
 .coding-output-tabs button[aria-selected="true"] { color:#5147cd; font-weight:700; border-bottom:2px solid #6558ca; }
+.coding-console-header-actions { display:flex; align-items:center; gap:7px; }
+.coding-console-reset { display:grid!important; place-items:center; width:30px; height:30px; border:1px solid #e0e5ee!important; border-radius:8px; color:#65728a; transition:background-color .15s ease,border-color .15s ease,color .15s ease; }
+.coding-console-reset:hover:not(:disabled) { color:#5147cd!important; border-color:#c9c2ff!important; background:#f2f0ff; }
+.coding-console-reset:disabled { opacity:.45; cursor:not-allowed; }
 .coding-console-toggle { display:grid!important; place-items:center; width:30px; height:30px; border:1px solid #e0e5ee!important; border-radius:7px; color:#65728a; }
 .coding-console-content { flex:1 1 auto; min-height:0; padding:10px 12px; overflow:auto; overscroll-behavior:contain; }
 .coding-console-empty { color:#7b8497; font-size:12px; }
 .coding-test-case + .coding-test-case { margin-top:16px; padding-top:14px; border-top:1px solid var(--em-border); }
 .coding-test-case h4 { margin:0 0 8px; font-size:14px; }
+.coding-test-case h4 { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.coding-test-case.is-passed { padding:12px; border:1px solid #b9e4d0; border-radius:12px; background:linear-gradient(135deg,#f0fbf5 0%,#e4f6ec 100%); }
+.coding-test-case.is-failed { padding:12px; border:1px solid #efc5c5; border-radius:12px; background:linear-gradient(135deg,#fff5f4 0%,#fbe9e8 100%); }
+.coding-test-case.is-passed + .coding-test-case,.coding-test-case.is-failed + .coding-test-case { margin-top:12px; }
+.coding-case-status { padding:4px 9px; border-radius:999px; font-size:11px; font-weight:700; }
+.coding-test-case.is-passed .coding-case-status { background:#d8f1e3; color:#23734e; }
+.coding-test-case.is-failed .coding-case-status { background:#f6dada; color:#a43e3e; }
 .coding-test-case small { display:block; margin:7px 0 4px; color:#7b8497; }
 .coding-test-case pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+.coding-run-summary { border:1px solid var(--em-border); border-radius:12px; background:var(--surface-soft,#f0f2f9); }
+.coding-run-summary.is-passed { border-color:#b9e4d0; background:linear-gradient(120deg,#f0fbf5,#e4f6ec); color:#246b4b; }
+.coding-run-summary.is-failed { border-color:#efc5c5; background:linear-gradient(120deg,#fff5f4,#fbe9e8); color:#9f3d3d; }
+.coding-result-list { display:grid; gap:8px; }
+.coding-result-case { padding:11px 13px; border:1px solid var(--em-border); border-radius:11px; }
+.coding-result-case.is-passed { border-color:#b9e4d0; background:linear-gradient(120deg,#f0fbf5,#e4f6ec); color:#246b4b; }
+.coding-result-case.is-failed { border-color:#efc5c5; background:linear-gradient(120deg,#fff5f4,#fbe9e8); color:#9f3d3d; }
+.coding-result-case-heading { display:flex; align-items:center; gap:9px; min-height:22px; }
+.coding-result-case-heading strong { text-transform:capitalize; }
+.coding-result-case-heading small { margin-left:auto; color:inherit; opacity:.8; }
+.coding-result-icon { display:grid; place-items:center; flex:0 0 20px; width:20px; height:20px; border-radius:50%; background:#ffffffa8; font-size:13px; font-weight:800; }
+.coding-result-case pre { margin:9px 0 5px; white-space:pre-wrap; overflow-wrap:anywhere; color:inherit; }
+.coding-result-metrics { display:block; margin-top:7px; color:inherit; opacity:.75; }
+.exam-modern[data-theme="dark"] .coding-test-case.is-passed,.exam-modern[data-theme="dark"] .coding-run-summary.is-passed,.exam-modern[data-theme="dark"] .coding-result-case.is-passed { border-color:#386451; background:linear-gradient(120deg,#18392f,#1c302d); color:#a5e2c2; }
+.exam-modern[data-theme="dark"] .coding-test-case.is-failed,.exam-modern[data-theme="dark"] .coding-run-summary.is-failed,.exam-modern[data-theme="dark"] .coding-result-case.is-failed { border-color:#70414b; background:linear-gradient(120deg,#3c242c,#35232b); color:#ffc0c8; }
+.exam-modern[data-theme="dark"] .coding-test-case .coding-case-status { background:#ffffff12; color:inherit; }
 .exam-modern[data-theme="dark"] .coding-output-tabs button[aria-selected="true"] { color:#c2b5ff; border-color:#a797ef; }
 .exam-modern[data-theme="dark"] .coding-console-toggle { color:#d6dcee; border-color:#45516b!important; }
+.exam-modern[data-theme="dark"] .coding-console-reset { color:#d6dcee; border-color:#45516b!important; }
+.exam-modern[data-theme="dark"] .coding-console-reset:hover:not(:disabled) { color:#c2b5ff!important; border-color:#7268b8!important; background:#2b2946; }
 @media(max-width:760px) {
   .coding-editor-toolbar { align-items:flex-start; flex-wrap:wrap; gap:6px; padding:6px 8px!important; }
   .coding-editor-settings,.coding-run-actions { gap:6px; }

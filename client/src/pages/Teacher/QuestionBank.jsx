@@ -93,7 +93,7 @@ export default function QuestionBank() {
               <h2>{set.title}</h2>
               {setDescription(set) && <p className="bank-card-description">{setDescription(set)}</p>}
             </div>
-            <div className="bank-card-footer"><div className="bank-card-meta"><strong>{set.totalMarks}</strong><span>marks</span>{!set.readyForAssessment && <small>Needs hidden grading tests</small>}</div>
+            <div className="bank-card-footer"><div className="bank-card-meta"><strong>{set.totalMarks}</strong><span>marks</span>{!set.readyForAssessment && <small>Needs required grading test cases</small>}</div>
               <div className="bank-card-actions">
                 <Link className="bank-action-edit" to={"/teacher/questions/sets/" + set._id}><PencilLine size={14} />Edit</Link>
                 <button className="bank-action-delete" onClick={() => D({ ...set, isSet: true })}><Trash2 size={14} />Delete</button>

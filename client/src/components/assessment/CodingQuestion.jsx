@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
-import { ChevronDown, ChevronUp, GripHorizontal, GripVertical, ListChecks, Terminal } from "lucide-react";
+import { ChevronDown, ChevronUp, GripHorizontal, GripVertical, ListChecks, RotateCcw, Terminal } from "lucide-react";
 import { codeService } from "../../services/codeService";
 import { errorMessage } from "../../services/api";
 const CodeEditor = lazy(() => import("../coding/CodeEditor"));
@@ -26,11 +26,16 @@ export default function CodingQuestion({
     defaultLanguage = languages.includes("cpp") ? "cpp" : languages[0],
     language = languages.includes(value?.language) ? value.language : defaultLanguage,
     code = value?.code ?? starterCode[language] ?? "";
+  const completeProgram = q.executionConfig?.mode === "STDIO";
   const [result, R] = useState(null),
     [busy, B] = useState(false),
     [error, E] = useState(""),
     [job, J] = useState(null),
     [reset, Reset] = useState(false);
+  const sampleOutputStatus = result?.results?.[0]?.status;
+  const sampleOutputState = sampleOutputStatus
+    ? sampleOutputStatus === "Accepted" ? "is-match" : "is-mismatch"
+    : result?.error || error ? "is-mismatch" : "";
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [consoleHeight, setConsoleHeight] = useState(() => Math.min(300, Math.max(180, window.innerHeight * 0.34)));
   const [questionPanePercent, setQuestionPanePercent] = useState(() => {
@@ -105,6 +110,14 @@ export default function CodingQuestion({
       B(false);
     }
   }
+  function resetTerminal() {
+    if (busy) return;
+    R(null);
+    E("");
+    J(null);
+    setOutputTab("testcase");
+    setConsoleOpen(true);
+  }
   return (
     <div className="coding-layout" style={{ "--question-pane-size": `${questionPanePercent}%` }}>
       <ProblemDescription question={q} />
@@ -150,8 +163,12 @@ export default function CodingQuestion({
               <button type="button" onClick={() => Reset(true)}>Reset code</button>
             </div>
             <div className="coding-run-actions">
-              <Button variant="secondary" disabled={busy} onClick={() => run(false)}>{busy ? "Running…" : "Run Code"}</Button>
-              <Button disabled={busy} onClick={() => run(true)}>Submit Code</Button>
+              {completeProgram ? (
+                <Button disabled={busy} onClick={() => run(true)}>{busy ? "Running…" : "Run & grade sample"}</Button>
+              ) : <>
+                <Button variant="secondary" disabled={busy} onClick={() => run(false)}>{busy ? "Running…" : "Run Code"}</Button>
+                <Button disabled={busy} onClick={() => run(true)}>Submit Code</Button>
+              </>}
             </div>
           </div>
           <div className="coding-editor-surface">
@@ -191,16 +208,39 @@ export default function CodingQuestion({
               <button type="button" role="tab" aria-selected={outputTab === "result"} onClick={() => { setOutputTab("result"); setConsoleOpen(true); }}><Terminal size={15} />Test Result</button>
             </div>
             {busy && <span className="coding-console-running">Running code…</span>}
-            <button type="button" className="coding-console-toggle" onClick={() => setConsoleOpen((open) => !open)} aria-label={consoleOpen ? "Collapse test panel" : "Expand test panel"} aria-expanded={consoleOpen}>
-              {consoleOpen ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
-            </button>
+            <div className="coding-console-header-actions">
+              <button type="button" className="coding-console-reset" onClick={resetTerminal} disabled={busy} aria-label="Reset terminal output" title="Reset terminal output">
+                <RotateCcw size={15} />
+              </button>
+              <button type="button" className="coding-console-toggle" onClick={() => setConsoleOpen((open) => !open)} aria-label={consoleOpen ? "Collapse test panel" : "Expand test panel"} aria-expanded={consoleOpen}>
+                {consoleOpen ? <ChevronDown size={17} /> : <ChevronUp size={17} />}
+              </button>
+            </div>
           </div>
           {consoleOpen && <div className="coding-console-content" ref={outputContentRef}>
-            {outputTab === "testcase" ? <TestCases cases={q.testCases} /> : <>
+            {outputTab === "testcase" ? <TestCases cases={completeProgram ? q.testCases.slice(0, 1) : q.testCases} results={completeProgram || result?.hidden ? null : result?.results} /> : <>
               {error && <p className="error">{error}</p>}
               {busy && !result && !error && <p className="coding-console-empty">Running your code…</p>}
-              <RunResult result={result} />
-              <Console result={result} />
+              {completeProgram ? (
+                <div className="coding-program-output" aria-label="Program output">
+                  <section className="coding-program-expected">
+                    <strong>Expected output</strong>
+                    <pre>{q.testCases.find((testCase) => !testCase.hidden)?.expectedOutput || "—"}</pre>
+                  </section>
+                  <section className={`coding-program-actual ${sampleOutputState}`}>
+                    <strong>Your output</strong>
+                    <pre>{result?.results?.[0]?.stdout || (busy ? "Running…" : result ? "No output produced." : "Run your program to see its output.")}</pre>
+                  </section>
+                  {(result?.error || result?.results?.[0]?.compileOutput || result?.results?.[0]?.stderr) && (
+                    <p className="coding-program-error">
+                      {result.error || result.results?.[0]?.compileOutput || result.results?.[0]?.stderr}
+                    </p>
+                  )}
+                </div>
+              ) : <>
+                <RunResult result={result} />
+                <Console result={result} />
+              </>}
             </>}
           </div>}
         </section>

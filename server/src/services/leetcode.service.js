@@ -14,15 +14,55 @@ async function request(path, body) {
   try {
     const response = await fetch(origin + path, {
       method: body ? "POST" : "GET",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        Origin: origin,
+        Referer: `${origin}/problemset/`,
+        "X-Requested-With": "XMLHttpRequest",
+      },
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(20000),
-      redirect: "error",
     });
-    if (!response.ok) throw new Error("Upstream unavailable");
-    return await response.json();
-  } catch {
-    throw new ApiError(502, "LeetCode is unavailable or blocked this request. Try again later, or enter the problem manually.");
+    if (!response.ok) {
+      const contentType = response.headers.get("content-type") || "unknown";
+      const responseBody = (await response.text().catch(() => "")).slice(0, 4000);
+      const bodyHint = /cloudflare|captcha|verify you are human|access denied/i.test(responseBody)
+        ? "challenge-or-access-denied"
+        : /rate.?limit|too many requests/i.test(responseBody)
+          ? "rate-limit"
+          : responseBody.trim()
+            ? "unrecognized-error-body"
+            : "empty-body";
+      console.warn("LeetCode import upstream rejection", {
+        path,
+        status: response.status,
+        statusText: response.statusText,
+        bodyHint,
+        contentType,
+        retryAfter: response.headers.get("retry-after"),
+        cloudflareRay: response.headers.get("cf-ray"),
+      });
+
+      let reason = "LeetCode is temporarily unavailable. Try again later, or enter the problem manually.";
+      if (response.status === 403) {
+        reason = "LeetCode denied this server's import request (HTTP 403). Its access protection is blocking the server request. Try later or enter the problem manually.";
+      } else if (response.status === 429) {
+        const retryAfter = response.headers.get("retry-after");
+        reason = `LeetCode rate-limited this server (HTTP 429)${retryAfter ? `; Retry-After: ${retryAfter}` : ""}. Wait before importing again, or enter the problem manually.`;
+      }
+      throw new ApiError(502, reason);
+    }
+    try {
+      return await response.json();
+    } catch {
+      throw new ApiError(502, "LeetCode returned an unexpected response. Try again later, or enter the problem manually.");
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(502, "LeetCode could not be reached. Check the server's internet connection, then try again or enter the problem manually.");
   }
 }
 
@@ -98,13 +138,25 @@ export function convertProblem(problem) {
   }
   const languageOrder = ["python", "javascript", "cpp", "java", "c"];
   const supportedLanguages = languageOrder.filter((language) => starterCode[language]);
+  const inferredMethod = Object.values(starterCode).map((code) =>
+    code.match(/\bdef\s+(\w+)\s*\(/)?.[1] ||
+    code.match(/(?:\b(?:var|let|const)\s+)?(\w+)\s*=\s*function\s*\(/)?.[1] ||
+    code.match(/\bfunction\s+(\w+)\s*\(/)?.[1] ||
+    code.match(/\b(\w+)\s*\([^;{}]*\)\s*\{/g)?.map((match) => match.match(/\b(\w+)\s*\(/)?.[1]).find((name) => name && !["if", "for", "while", "switch"].includes(name)),
+  ).find(Boolean);
+  const methodName = String(metadata.name || inferredMethod || "").trim();
+  const executionConfig = /^[A-Za-z_$][\w$]*$/.test(methodName) && params.length
+    ? { mode: "LEETCODE", methodName, params: params.map(({ name, type }) => ({ name: String(name || ""), type: String(type || "") })), returnType: String(metadata.return?.type || "") }
+    : undefined;
   if (!supportedLanguages.length) {
     starterCode.python = `import json\nimport sys\n\ndef solve(*args):\n    # TODO: implement the solution. Arguments are decoded JSON values.\n    raise NotImplementedError("Implement solve")\n\nargs = [json.loads(line) for line in sys.stdin.read().splitlines() if line.strip()]\nresult = solve(*args)\nprint(json.dumps(result, separators=(',', ':')))\n`;
     starterCode.javascript = `const fs = require('fs');\n\nfunction solve(...args) {\n  // TODO: implement the solution. Arguments are decoded JSON values.\n  throw new Error('Implement solve');\n}\n\nconst args = fs.readFileSync(0, 'utf8').trim().split(/\\r?\\n/).filter(Boolean).map(JSON.parse);\nconsole.log(JSON.stringify(solve(...args)));\n`;
     supportedLanguages.push("python", "javascript");
     warnings.push("LeetCode starter templates were unavailable, so editable standard-input templates were added instead.");
   } else {
-    warnings.push("LeetCode starter code is copied as provided. Review its method signature and adapt it to this portal’s standard-input runner before using it in an assessment.");
+    warnings.push(executionConfig
+      ? "LeetCode method submissions are wrapped to run against these JSON test inputs. You can also replace the starter with a complete program that reads standard input and prints its result."
+      : "The method signature could not be identified automatically. Review the starter code and provide a complete standard-input program before using this question.");
   }
   return {
     question: {
@@ -122,6 +174,7 @@ export function convertProblem(problem) {
       examples,
       testCases,
       starterCode,
+      ...(executionConfig ? { executionConfig } : {}),
       supportedLanguages,
     },
     warnings,

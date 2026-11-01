@@ -1,9 +1,12 @@
-export default function TestCases({ cases }) {
+export default function TestCases({ cases, results = [] }) {
   return (
     <div>
       {cases.map((t, i) => (
-        <section className="coding-test-case" key={i}>
-          <h4>Sample case {i + 1}</h4>
+        <section className={`coding-test-case${results?.[i] ? results[i].passed ? " is-passed" : " is-failed" : ""}`} key={i}>
+          <h4>
+            <span>Sample case {i + 1}</span>
+            {results?.[i] && <span className="coding-case-status">{results[i].passed ? "Passed" : "Failed"}</span>}
+          </h4>
           <small>Input</small>
           <pre>{t.input}</pre>
           <small>Expected output</small>

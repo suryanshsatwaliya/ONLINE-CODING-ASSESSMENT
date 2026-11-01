@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 export default function Modal({ title, children, onClose, className = "" }) {
+  const insetScroll = className.split(/\s+/).includes("submission-details-modal");
   useEffect(() => {
     const f = (e) => {
       if (e.key === "Escape") onClose?.();
@@ -34,7 +35,7 @@ export default function Modal({ title, children, onClose, className = "" }) {
             </button>
           )}
         </div>
-        {children}
+        {insetScroll ? <div className="submission-details-scroll">{children}</div> : children}
       </section>
     </div>
   );

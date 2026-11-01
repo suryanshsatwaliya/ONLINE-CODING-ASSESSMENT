@@ -83,9 +83,14 @@ export async function get(req, res) {
   });
   if (!s) throw new ApiError(404, "Submission not found");
   const result = await ExecutionResult.findOne({ submission: s._id });
+  const assessment = await Assessment.findById(s.assessment).select("questions");
+  const question = assessment?.questions.find(
+    (item) => String(item._id) === s.questionId,
+  );
+  const isCompleteProgram = question?.executionConfig?.mode === "STDIO";
   res.json({
     status: s.status,
     error: s.error,
-    ...(result ? publicExecution(result, true) : {}),
+    ...(result ? publicExecution(result, true, isCompleteProgram) : {}),
   });
 }

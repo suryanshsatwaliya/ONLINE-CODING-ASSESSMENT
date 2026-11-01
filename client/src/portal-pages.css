@@ -518,6 +518,59 @@ html[data-theme="dark"] .entry-help { border-color: var(--line); }
   .student-entry { padding-inline: 16px; }
   .entry-form { padding: 24px 20px; }
 }
+
+/* Landing page: assessment safeguards and a more substantial violet footer. */
+.landing-safeguards {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 24px 84px;
+}
+.landing-safeguards-heading { max-width: 690px; margin: 0 auto 28px; text-align: center; }
+.landing-safeguards-heading h2 { margin: 11px 0 9px; color: var(--ink, #18243b); font-size: clamp(25px, 3vw, 35px); line-height: 1.2; letter-spacing: -.04em; }
+.landing-safeguards-heading p { margin: 0; color: var(--muted, #69748a); font-size: 14px; line-height: 1.7; }
+.landing-safeguards-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; }
+.landing-safeguard-card { display: flex; align-items: flex-start; gap: 14px; min-height: 145px; padding: 21px; border: 1px solid var(--line, #dfe4ee); border-radius: 15px; background: var(--surface, #fff); box-shadow: 0 8px 24px #202b4a08; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.landing-safeguard-card:hover { transform: translateY(-4px); border-color: #bcb6ed; box-shadow: 0 14px 32px #1c28520c; }
+.landing-safeguard-icon { width: 39px; height: 39px; flex: 0 0 39px; display: grid; place-items: center; border: 1px solid #e3defe; border-radius: 11px; background: #f1efff; color: #6256d8; }
+.landing-safeguard-card > div { min-width: 0; }
+.landing-safeguard-index { color: #8c84d9; font: 700 10px ui-monospace, monospace; letter-spacing: .08em; }
+.landing-safeguard-card h3 { margin: 8px 0 6px; color: var(--ink, #18243b); font-size: 14px; letter-spacing: -.015em; }
+.landing-safeguard-card p { margin: 0; color: var(--muted, #69748a); font-size: 12px; line-height: 1.65; }
+.landing-safeguards-note { max-width: 770px; margin: 17px auto 0; color: var(--muted, #69748a); font-size: 10px; line-height: 1.6; text-align: center; }
+.landing-redesign .landing-footer-redesign { position: relative; display: block; overflow: hidden; padding: 38px max(24px, calc((100vw - 1160px) / 2)) 18px; border: 0; border-top: 1px solid #aaa0ff2b; background: radial-gradient(ellipse at 88% 0%, #8274e53d, transparent 35%), linear-gradient(120deg, #17182f 0%, #211c48 54%, #2e2558 100%); color: #d2d0e8; }
+.landing-footer-main { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(250px, 1.5fr) minmax(150px, .7fr) minmax(220px, .9fr); gap: clamp(28px, 6vw, 80px); max-width: 1160px; margin: 0 auto; padding-bottom: 31px; }
+.landing-footer-about { max-width: 370px; }
+.landing-footer-brand { color: #fff; font-size: 16px; }
+.landing-footer-brand i { color: #aaa1ff; font-style: normal; }
+.landing-footer-brand .brand-icon { width: 34px; height: 34px; border: 1px solid #ffffff20; border-radius: 10px; background: #6a5be4; color: #fff; }
+.landing-footer-about p { max-width: 340px; margin: 14px 0 0; color: #bbb9d2; font-size: 12px; line-height: 1.75; }
+.landing-footer-links { display: grid; align-content: start; justify-items: start; gap: 10px; }
+.landing-footer-links > strong, .landing-developer-label { margin-bottom: 2px; color: #aaa4d1; font-size: 9px; font-weight: 800; letter-spacing: .15em; }
+.landing-footer-links a { color: #d2d0e8; font-size: 11px; transition: color .16s ease; }
+.landing-footer-links a:hover, .landing-footer-developer a:hover { color: #c6beff; }
+.landing-footer-developer { display: grid; grid-template-columns: 1fr; justify-items: start; align-content: start; gap: 8px; }
+.landing-footer-developer strong { color: #fff; font-size: 13px; }
+.landing-footer-developer a { display: inline-flex; align-items: center; gap: 7px; color: #d2d0e8; font-size: 11px; transition: color .16s ease; }
+.landing-footer-developer a svg:first-child { color: #c1b8ff; }
+.landing-footer-bottom { display: flex; justify-content: space-between; gap: 14px; max-width: 1160px; margin: 0 auto; padding-top: 15px; border-top: 1px solid #ffffff1a; color: #9e9bb9; font-size: 10px; }
+html[data-theme="dark"] .landing-safeguards-heading h2,
+html[data-theme="dark"] .landing-safeguard-card h3 { color: var(--ink); }
+html[data-theme="dark"] .landing-safeguard-card { border-color: var(--line); background: var(--surface); }
+html[data-theme="dark"] .landing-safeguard-icon { border-color: #554a8a; background: #302a50; color: #c3baff; }
+
+@media (max-width: 720px) {
+  .landing-safeguards { padding: 0 20px 58px; }
+  .landing-safeguards-grid { grid-template-columns: 1fr; gap: 10px; }
+  .landing-safeguard-card { min-height: 0; padding: 17px; }
+  .landing-redesign .landing-footer-redesign { padding: 30px 22px 16px; }
+  .landing-footer-main { grid-template-columns: 1fr 1fr; gap: 26px 20px; padding-bottom: 24px; }
+  .landing-footer-about { grid-column: 1 / -1; }
+  .landing-footer-bottom { flex-direction: column; gap: 6px; }
+}
+@media (max-width: 390px) {
+  .landing-footer-main { grid-template-columns: 1fr; }
+  .landing-footer-about { grid-column: auto; }
+}
 @media (prefers-reduced-motion: reduce) {
   .landing-redesign *, .teacher-login-page *, .student-entry * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
@@ -536,4 +589,44 @@ html[data-theme="dark"] .entry-help { border-color: var(--line); }
     padding-block: clamp(10px, 1.8vh, 18px);
   }
   .teacher-login-layout { height: 100%; align-content: center; }
+}
+
+.portal-return-link {
+  width: fit-content;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid #d9d3ff;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #f3f1ff, #ebe9ff 58%, #f7f5ff);
+  box-shadow: 0 5px 15px #6256d812;
+  color: #5d52c8;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.portal-return-link:hover {
+  transform: translateY(-2px);
+  border-color: #b8aff7;
+  background: linear-gradient(135deg, #eeebff, #e3dfff 58%, #f2efff);
+  box-shadow: 0 9px 20px #6256d826;
+  color: #4f43bd;
+}
+.portal-return-link:focus-visible { outline: 3px solid #8174e155; outline-offset: 2px; }
+.entry-back.portal-return-link { margin-bottom: clamp(12px, 1.8vh, 20px); }
+.teacher-login-back.portal-return-link { display: flex; align-self: flex-start; margin-bottom: 22px; }
+html[data-theme="dark"] .portal-return-link {
+  border-color: #554b83;
+  background: linear-gradient(135deg, #302b4d, #39315d 58%, #302b4d);
+  box-shadow: 0 5px 16px #08071338;
+  color: #d0c9ff;
+}
+html[data-theme="dark"] .portal-return-link:hover {
+  border-color: #796bc1;
+  background: linear-gradient(135deg, #39325e, #453b70 58%, #39325e);
+  color: #e4dfff;
 }

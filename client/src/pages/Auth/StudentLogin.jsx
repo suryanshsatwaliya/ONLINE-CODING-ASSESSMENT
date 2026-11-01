@@ -41,7 +41,7 @@ export default function StudentLogin() {
   return <>
     <Navbar />
     <main className="student-entry">
-      <Link className="entry-back" to="/"><ArrowLeft size={16} /> Back to portals</Link>
+      <Link className="entry-back portal-return-link" to="/"><ArrowLeft size={16} /> Back to portals</Link>
       <div className="entry-layout">
         <section className="entry-welcome">
           <span className="entry-eyebrow"><GraduationCap size={17} /> STUDENT SPACE</span>

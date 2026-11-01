@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Copy, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { Copy, Trash2, ArrowUp, ArrowDown, ArrowLeft } from "lucide-react";
 import { api, errorMessage } from "../../services/api";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
@@ -65,7 +65,7 @@ export default function QuestionSetEditor() {
   return (
     <div className="question-set-studio">
       <div className="page-title">
-        <div><Link className="back-link" to="/teacher/questions">← Question Bank</Link>
+        <div><Link className="back-link back-link-card" to="/teacher/questions"><span className="back-link-icon"><ArrowLeft size={17} /></span><span>Question Bank</span></Link>
           <h1>{id ? "Edit" : "Create"} {coding ? "coding set" : "quiz"}</h1>
           <p>Build once. Save to your bank. Reuse whenever you need.</p>
         </div>

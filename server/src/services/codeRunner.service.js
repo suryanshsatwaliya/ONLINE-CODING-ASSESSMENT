@@ -1,11 +1,26 @@
 import { env } from "../config/env.js";
 import ApiError from "../utils/ApiError.js";
 import { normalize, weightedScore } from "./grading.service.js";
+import { prepareLeetcodeCode } from "./leetcodeHarness.service.js";
 export const languages = JSON.parse(
   env.CODE_RUNNER_LANGUAGES ||
     '{"c":50,"cpp":54,"java":62,"python":71,"javascript":63}',
 );
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === "object")
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalJson(value[key])]));
+  return value;
+}
+function outputsMatch(actual, expected) {
+  try {
+    return JSON.stringify(canonicalJson(JSON.parse(actual))) ===
+      JSON.stringify(canonicalJson(JSON.parse(expected)));
+  } catch {
+    return normalize(actual) === normalize(expected);
+  }
+}
 async function request(path, body, deadline = Date.now() + 15000) {
   const headers = { "Content-Type": "application/json" };
   if (env.CODE_RUNNER_API_KEY)
@@ -31,12 +46,16 @@ export async function execute(q, code, language, hidden = false) {
     );
   if (!languages[language] || !q.supportedLanguages.includes(language))
     throw new ApiError(422, "Unsupported language");
-  const tests = q.testCases.filter((t) => Boolean(t.hidden) === hidden),
+  const sourceCode = prepareLeetcodeCode(q, code, language);
+  const completeProgram = q.executionConfig?.mode === "STDIO";
+  const tests = completeProgram
+    ? q.testCases.filter((t) => !t.hidden).slice(0, 1)
+    : q.testCases.filter((t) => Boolean(t.hidden) === hidden),
     results = [];
   for (const t of tests) {
     const deadline = Date.now() + 55000;
     const body = {
-      source_code: Buffer.from(code).toString("base64"),
+      source_code: Buffer.from(sourceCode).toString("base64"),
       stdin: Buffer.from(t.input).toString("base64"),
       language_id: languages[language],
       cpu_time_limit: q.timeLimit,
@@ -65,7 +84,7 @@ export async function execute(q, code, language, hidden = false) {
     const decode = (x) => (x ? Buffer.from(x, "base64").toString("utf8") : "");
     const stdout = decode(r.stdout),
       passed =
-        r.status.id === 3 && normalize(stdout) === normalize(t.expectedOutput);
+        r.status.id === 3 && outputsMatch(stdout, t.expectedOutput);
     results.push({
       passed,
       status: passed
@@ -82,11 +101,24 @@ export async function execute(q, code, language, hidden = false) {
   }
   return { results, score: weightedScore(tests, results, q.marks) };
 }
-export const publicExecution = (execution, hidden) =>
-  hidden
+export const publicExecution = (execution, hidden, revealSampleOutput = false) =>
+  hidden && revealSampleOutput
     ? {
-        score: execution.score,
-        passed: execution.results.filter((t) => t.passed).length,
-        total: execution.results.length,
+        results: execution.results.slice(0, 1).map((result) => ({
+          status: result.status,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          compileOutput: result.compileOutput,
+        })),
       }
-    : execution;
+    : hidden
+      ? {
+          passed: execution.results.filter((t) => t.passed).length,
+          total: execution.results.length,
+          hidden: true,
+          results: execution.results.map(({ passed }) => ({
+            passed,
+            status: passed ? "Passed" : "Failed",
+          })),
+        }
+      : execution;

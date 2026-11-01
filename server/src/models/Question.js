@@ -18,6 +18,7 @@ export default model(
     outputFormat: String,
     examples: [{ input: String, output: String, explanation: String }],
     starterCode: Schema.Types.Mixed,
+    executionConfig: Schema.Types.Mixed,
     supportedLanguages: [String],
     timeLimit: Number,
     memoryLimit: Number,

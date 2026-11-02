@@ -18,6 +18,11 @@ export const codeSchema = z.object({
   language: z.enum(["c", "cpp", "java", "python", "javascript"]),
   code: z.string().min(1).max(50000),
 });
+export const teacherCodeRunSchema = z.object({
+  language: z.enum(["c", "cpp", "java", "python", "javascript"]),
+  code: z.string().min(1).max(50000),
+  submit: z.boolean().optional().default(false),
+});
 export const eventSchema = z.object({
   attemptId: z.string().regex(/^[a-f0-9]{24}$/i),
   eventId: z.string().uuid(),

@@ -38,7 +38,7 @@ async function request(path, body, deadline = Date.now() + 15000) {
   if (!r.ok) throw new ApiError(502, "Code runner rejected the request");
   return r.json();
 }
-export async function execute(q, code, language, hidden = false) {
+export async function execute(q, code, language, hidden = false, { includeHidden = false, sampleOnly = false } = {}) {
   if (!env.CODE_RUNNER_URL)
     throw new ApiError(
       503,
@@ -48,9 +48,13 @@ export async function execute(q, code, language, hidden = false) {
     throw new ApiError(422, "Unsupported language");
   const sourceCode = prepareLeetcodeCode(q, code, language);
   const completeProgram = q.executionConfig?.mode === "STDIO";
-  const tests = completeProgram
-    ? q.testCases.filter((t) => !t.hidden).slice(0, 1)
-    : q.testCases.filter((t) => Boolean(t.hidden) === hidden),
+  const tests = includeHidden
+    ? q.testCases.filter((t) => Boolean(t.hidden))
+    : sampleOnly
+      ? q.testCases.filter((t) => !t.hidden).slice(0, 1)
+      : completeProgram
+        ? q.testCases.filter((t) => !t.hidden).slice(0, 1)
+        : q.testCases.filter((t) => Boolean(t.hidden) === hidden),
     results = [];
   for (const t of tests) {
     const deadline = Date.now() + 55000;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api, errorMessage } from "../../services/api";
 import Input from "../common/Input";
 
 const BLOCK_TAGS = new Set(["P", "DIV", "LI", "UL", "OL", "H1", "H2", "H3", "H4", "PRE"]);
@@ -155,6 +156,8 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
   const [activeLanguage, setActiveLanguage] = useState(() =>
     q.supportedLanguages.includes("python") ? "python" : q.supportedLanguages[0] || "python",
   );
+  const [restoringCases, setRestoringCases] = useState(false);
+  const [restoreError, setRestoreError] = useState("");
   useEffect(() => {
     if (q.externalReference)
       setActiveLanguage(q.supportedLanguages.includes("python") ? "python" : q.supportedLanguages[0] || "python");
@@ -181,20 +184,46 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
         Code submission style
         <select
           value={methodStyle ? "LEETCODE" : "STDIO"}
-          onChange={(event) => {
+          disabled={restoringCases}
+          onChange={async (event) => {
             if (event.target.value === "LEETCODE") {
               const compatibleLanguages = q.supportedLanguages.filter((language) => language !== "c");
+              const { methodTestCases, ...methodConfig } = executionConfig;
+              let restoredTestCases = methodTestCases;
+              if (!restoredTestCases?.length && executionConfig.mode === "STDIO" && q.externalReference) {
+                setRestoringCases(true);
+                setRestoreError("");
+                try {
+                  const { data } = await api.post("/questions/leetcode/import", { reference: q.externalReference });
+                  restoredTestCases = data.question?.testCases?.map((testCase) => ({
+                    ...testCase,
+                    hidden: false,
+                    weight: testCase.weight || 1,
+                  }));
+                  if (!restoredTestCases?.length) throw new Error("LeetCode did not return any public sample cases.");
+                } catch (error) {
+                  setRestoreError(`Could not restore the LeetCode sample cases: ${errorMessage(error)}`);
+                  setRestoringCases(false);
+                  return;
+                }
+                setRestoringCases(false);
+              }
               onChange({
                 ...q,
+                testCases: restoredTestCases?.length ? restoredTestCases : q.testCases,
                 supportedLanguages: compatibleLanguages.length ? compatibleLanguages : ["cpp"],
-                executionConfig: { mode: "LEETCODE", methodName: "", params: [], returnType: "" },
+                executionConfig: { ...methodConfig, mode: "LEETCODE", methodName: methodConfig.methodName || "", params: methodConfig.params || [], returnType: methodConfig.returnType || "" },
               });
               if (activeLanguage === "c") setActiveLanguage(compatibleLanguages[0] || "cpp");
             } else {
               const testCases = q.testCases.length
                 ? [{ ...q.testCases[0], hidden: false }]
                 : [{ input: "", expectedOutput: "", hidden: false, weight: 1 }];
-              onChange({ ...q, testCases, executionConfig: { ...executionConfig, mode: "STDIO" } });
+              onChange({
+                ...q,
+                testCases,
+                executionConfig: { ...executionConfig, mode: "STDIO", methodTestCases: q.testCases },
+              });
             }
           }}
         >
@@ -202,6 +231,8 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
           <option value="LEETCODE">LeetCode method (class Solution)</option>
         </select>
         <small>Method style is the default and wraps a class Solution method for Judge0. Complete-program mode grades only the first visible sample case; hidden cases are ignored.</small>
+        {restoringCases && <small role="status">Restoring public LeetCode sample cases…</small>}
+        {restoreError && <small className="error" role="alert">{restoreError}</small>}
       </label>
       {methodStyle && <div className="coding-execution-config">
         <label className="field">
@@ -316,7 +347,7 @@ export default function CodingProblemBuilder({ value: q, onChange }) {
       </details>
       <h3>Examples</h3>
       {q.examples.map((t, i) => (
-        <div className="form-grid" key={i}>
+        <div className="form-grid example-builder-card" key={i}>
           <label className="field">Example input
           <textarea
             rows="3"

@@ -350,6 +350,19 @@
 .coding-result-case-heading small { margin-left:auto; color:inherit; opacity:.8; }
 .coding-result-icon { display:grid; place-items:center; flex:0 0 20px; width:20px; height:20px; border-radius:50%; background:#ffffffa8; font-size:13px; font-weight:800; }
 .coding-result-case pre { margin:9px 0 5px; white-space:pre-wrap; overflow-wrap:anywhere; color:inherit; }
+.coding-result-outputs { display:grid; gap:7px; margin-top:8px; }
+.coding-result-outputs section { min-width:0; padding:8px 10px; border:1px solid var(--em-border); border-radius:8px; background:#f6f7fb; }
+.coding-result-outputs section strong { display:block; margin-bottom:5px; color:var(--em-ink); font-size:11px; }
+.coding-result-outputs pre { max-height:180px; margin:0; padding:8px 10px; overflow:auto; border-radius:6px; background:#f0f3f9; color:#33425b; font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+.coding-result-outputs .coding-result-actual.is-match { border-color:#83c99f; background:linear-gradient(110deg,#f1fbf5,#e1f5e8); }
+.coding-result-outputs .coding-result-actual.is-match pre { background:linear-gradient(110deg,#e6f5eb,#d8efdf); color:#285842; }
+.coding-result-outputs .coding-result-actual.is-mismatch { border-color:#e1a19d; background:linear-gradient(110deg,#fff7f5,#fbe9e7); }
+.coding-result-outputs .coding-result-actual.is-mismatch pre { background:linear-gradient(110deg,#fbe9e7,#f5dcda); color:#803c3a; }
+.exam-modern[data-theme="dark"] .coding-result-outputs section { background:#222c40; border-color:var(--em-border); }
+.exam-modern[data-theme="dark"] .coding-result-outputs .coding-result-actual.is-match { background:linear-gradient(110deg,#1b342d,#224235); border-color:#4d946e; }
+.exam-modern[data-theme="dark"] .coding-result-outputs .coding-result-actual.is-match pre { background:linear-gradient(110deg,#244537,#2b5140); color:#c9efd7; }
+.exam-modern[data-theme="dark"] .coding-result-outputs .coding-result-actual.is-mismatch { background:linear-gradient(110deg,#39272c,#482c32); border-color:#99575c; }
+.exam-modern[data-theme="dark"] .coding-result-outputs .coding-result-actual.is-mismatch pre { background:linear-gradient(110deg,#4a3035,#57343a); color:#ffd1cd; }
 .coding-result-metrics { display:block; margin-top:7px; color:inherit; opacity:.75; }
 .exam-modern[data-theme="dark"] .coding-test-case.is-passed,.exam-modern[data-theme="dark"] .coding-run-summary.is-passed,.exam-modern[data-theme="dark"] .coding-result-case.is-passed { border-color:#386451; background:linear-gradient(120deg,#18392f,#1c302d); color:#a5e2c2; }
 .exam-modern[data-theme="dark"] .coding-test-case.is-failed,.exam-modern[data-theme="dark"] .coding-run-summary.is-failed,.exam-modern[data-theme="dark"] .coding-result-case.is-failed { border-color:#70414b; background:linear-gradient(120deg,#3c242c,#35232b); color:#ffc0c8; }

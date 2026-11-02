@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Code2, Grid2X2, List, ListChecks, PencilLine, Trash2 } from "lucide-react";
+import { Code2, Grid2X2, List, ListChecks, PencilLine, Play, Trash2 } from "lucide-react";
 import { api, errorMessage } from "../../services/api";
 import { useToast } from "../../components/common/Toast";
 import Modal from "../../components/common/Modal";
@@ -40,12 +40,19 @@ export default function QuestionBank() {
   async function save(e) {
     e.preventDefault();
     try {
-      q._id
+      const { data } = q._id
         ? await api.put("/questions/" + q._id, q)
         : await api.post("/questions", q);
-      Q(null);
       load();
-      toast("Question saved successfully", { success: true });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      document.querySelector(".modal")?.scrollTo({ top: 0, behavior: "smooth" });
+      if (q.type === "CODING") {
+        Q(data);
+        toast("Coding question saved. You can test it now.", { success: true });
+      } else {
+        Q(null);
+        toast("Question saved successfully", { success: true });
+      }
     } catch (e) {
       toast(errorMessage(e));
     }
@@ -124,6 +131,7 @@ export default function QuestionBank() {
                 {(q.question || q.description) && <p className="bank-card-description">{q.question || q.description}</p>}
               </div>
               <div className="bank-card-actions">
+                {q.type === "CODING" && <Link className="bank-action-test" to={`/teacher/questions/${q._id}/test`}><Play size={14} />Test</Link>}
                 <button className="bank-action-edit" onClick={() => Q(q)}><PencilLine size={14} />Edit</button>
                 <button className="bank-action-delete" onClick={() => D(q)}><Trash2 size={14} />Delete</button>
               </div>
@@ -141,6 +149,7 @@ export default function QuestionBank() {
           onClose={() => Q(null)}
         >
           <QuestionBuilder value={q} onChange={Q} onSubmit={save} />
+          {q.type === "CODING" && q._id && <div className="question-bank-test-saved"><span>Saved question is ready to run against its test cases.</span><Link className="btn" to={`/teacher/questions/${q._id}/test`}><Play size={16} /> Test question</Link></div>}
         </Modal>
       )}
       {del && (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Copy, Trash2, ArrowUp, ArrowDown, ArrowLeft } from "lucide-react";
+import { Copy, Trash2, ArrowUp, ArrowDown, ArrowLeft, Play } from "lucide-react";
 import { api, errorMessage } from "../../services/api";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
@@ -52,6 +52,7 @@ export default function QuestionSetEditor() {
     try {
       const { data } = id ? await api.put("/question-sets/" + id, form) : await api.post("/question-sets", form);
       setDirty(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       toast(coding ? "Coding set saved successfully" : "Quiz saved successfully", { success: true });
       if (!id) nav("/teacher/questions/sets/" + data._id, { replace: true });
       else setForm((previous) => ({ ...previous, revision: data.revision }));
@@ -94,6 +95,7 @@ export default function QuestionSetEditor() {
                 </div>
               </div>
               {coding ? <>
+                {id && q._id && !dirty && <div className="question-set-test-action"><span>Saved question · ready to test</span><Link className="btn" to={`/teacher/questions/sets/${id}/test/${index}`}><Play size={15} /> Test question</Link></div>}
                 <LeetcodeImport
                   value={q}
                   onChange={(updated) => updateQuestion(q.draftId, updated)}

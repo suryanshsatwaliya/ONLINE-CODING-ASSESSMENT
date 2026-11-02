@@ -13,6 +13,7 @@ import NewAssessment from "../pages/Teacher/NewAssessment";
 import EditAssessment from "../pages/Teacher/EditAssessment";
 import QuestionBank from "../pages/Teacher/QuestionBank";
 import QuestionSetEditor from "../pages/Teacher/QuestionSetEditor";
+import QuestionTester from "../pages/Teacher/QuestionTester";
 import LiveMonitor from "../pages/Teacher/LiveMonitor";
 import Submissions from "../pages/Teacher/Submissions";
 import Settings from "../pages/Teacher/Settings";
@@ -40,6 +41,8 @@ export default function AppRoutes() {
           <Route path="questions" element={<QuestionBank />} />
           <Route path="questions/new/:kind" element={<QuestionSetEditor />} />
           <Route path="questions/sets/:id" element={<QuestionSetEditor />} />
+          <Route path="questions/:id/test" element={<QuestionTester />} />
+          <Route path="questions/sets/:id/test/:index" element={<QuestionTester questionSet />} />
           <Route path="monitor" element={<LiveMonitor />} />
           <Route path="submissions" element={<Submissions />} />
           <Route path="results" element={<Submissions />} />

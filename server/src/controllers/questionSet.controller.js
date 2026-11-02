@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { QuestionSet } from "../models/index.js";
 import ApiError from "../utils/ApiError.js";
+import { execute, publicExecution } from "../services/codeRunner.service.js";
 
 function payload(body) {
   const questions = body.questions.map((q) => ({ ...q, _id: new mongoose.Types.ObjectId() }));
@@ -21,6 +22,18 @@ export async function get(req, res) {
   const set = await QuestionSet.findOne({ _id: req.params.id, createdBy: req.user.id });
   if (!set) throw new ApiError(404, "Question set not found");
   res.json(set);
+}
+export async function testRunQuestion(req, res) {
+  const set = await QuestionSet.findOne({ _id: req.params.id, createdBy: req.user.id }).select("questions").lean();
+  const index = Number(req.params.index);
+  const question = set?.questions?.[index];
+  if (!Number.isInteger(index) || index < 0 || !question || question.type !== "CODING")
+    throw new ApiError(404, "Coding question not found in this set");
+  const submit = req.body.submit === true;
+  const completeProgram = question.executionConfig?.mode === "STDIO";
+  const runHidden = submit && !completeProgram;
+  const execution = await execute(question, req.body.code, req.body.language, false, { includeHidden: runHidden, sampleOnly: !runHidden });
+  res.json(runHidden ? { status: "DONE", ...publicExecution(execution, true) } : execution);
 }
 export async function create(req, res) {
   res.status(201).json(await QuestionSet.create({ ...payload(req.body), createdBy: req.user.id }));

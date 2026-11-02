@@ -68,6 +68,12 @@ const questionFields = z
       methodName: z.string().max(100).default(""),
       params: z.array(z.object({ name: z.string().max(100), type: z.string().min(1).max(100) })).max(20).default([]),
       returnType: z.string().max(100).optional(),
+      methodTestCases: z.array(z.object({
+        input: text,
+        expectedOutput: text,
+        hidden: z.boolean(),
+        weight: z.number().positive().max(100),
+      })).max(30).optional(),
     }).optional(),
     supportedLanguages: z
       .array(z.enum(["c", "cpp", "java", "python", "javascript"]))

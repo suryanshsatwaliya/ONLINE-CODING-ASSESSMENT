@@ -6,7 +6,7 @@ export default function RunResult({ result }) {
       {result.status || "Run complete"}
       {result.total !== undefined && (
         <span>
-          {" "}· {result.passed}/{result.total} test cases passed
+          {" "}· {result.passed}/{result.total} {result.hidden ? "hidden test cases" : "test cases"} passed
         </span>
       )}
       {result.error && <p>{result.error}</p>}

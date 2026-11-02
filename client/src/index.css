@@ -46,7 +46,7 @@
 .is-quiz .bank-card-icon { border-color:#bce6d7; background:#e4f7ef; color:#13805f; }
 .bank-type-badge { border-radius:7px; font-size:9px; letter-spacing:.065em; }
 .bank-question-count { margin-left:auto; padding:6px 9px; border:1px solid #e8eaf2; border-radius:999px; background:#ffffffc9; color:#69758b; font-size:11px; font-weight:650; white-space:nowrap; }
-.bank-card-description { display:-webkit-box; margin:9px 0 0; overflow:hidden; color:#66738a; font-size:13px; line-height:1.55; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.bank-card-description { display:-webkit-box; margin:9px 0 0; overflow:hidden; color:#66738a; font-size:13px; line-height:1.55; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; }
 .bank-card-footer { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-top:auto; padding-top:22px; }
 .bank-card-meta { display:flex; min-width:0; flex-wrap:wrap; align-items:baseline; gap:5px; color:#66738a; font-size:12px; }
 .bank-card-meta strong { color:#18243b; font-size:22px; line-height:1; letter-spacing:-.035em; }

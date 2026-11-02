@@ -257,3 +257,128 @@ html[data-theme="dark"] .exam.exam-modern {
   color:var(--ink);
 }
 html[data-theme="dark"] .ah-status.status-live { background:#48272f; border-color:#76404a; color:#ff9aa3; }
+
+/* Final contrast pass for shared dialogs and transient popups. The dialog
+   shell uses its own sticky header, so theme the header independently too. */
+html[data-theme="dark"] .modal {
+  background:var(--surface);
+  border-color:var(--line);
+  color:var(--ink);
+  box-shadow:0 24px 80px #0008;
+}
+html[data-theme="dark"] .modal-heading {
+  background:var(--surface);
+  border-color:var(--line);
+  color:var(--ink);
+}
+html[data-theme="dark"] .modal-heading h1,
+html[data-theme="dark"] .modal-heading h2,
+html[data-theme="dark"] .modal-heading h3,
+html[data-theme="dark"] .modal > h1,
+html[data-theme="dark"] .modal > h2,
+html[data-theme="dark"] .modal > h3 { color:var(--ink); }
+html[data-theme="dark"] .modal p:not(.error) { color:var(--muted); }
+html[data-theme="dark"] .modal .warning-count { color:#f0ad83; }
+html[data-theme="dark"] .modal .warning-symbol { background:#453a25; color:#f4ce78; }
+html[data-theme="dark"] .modal-close-btn {
+  background:var(--surface-soft);
+  border-color:var(--line);
+  color:var(--muted);
+}
+html[data-theme="dark"] .modal-close-btn:hover {
+  background:var(--accent-soft);
+  border-color:#74629f;
+  color:var(--accent);
+}
+html[data-theme="dark"] .overlay { background:#050914d9; }
+html[data-theme="dark"] .toast-success {
+  background:linear-gradient(130deg,#1b2438 0%,#192238 62%,#292441 100%);
+  border-color:#40395f;
+  color:var(--ink);
+  box-shadow:0 28px 90px #0008,0 5px 18px #0004;
+}
+
+/* Native-looking controls and shared cards should follow the same dark
+   surfaces even when a page has no component-specific theme override. */
+html[data-theme="dark"] :is(.card,.panel,.popover,.dropdown-menu,.assessment-menu-options,.question-editor,.question-content,.coding-layout,.coding-console-panel,.coding-console-header,.coding-program-output section) {
+  border-color:var(--line);
+}
+html[data-theme="dark"] :is(.card,.panel,.popover,.dropdown-menu,.question-content,.coding-layout,.coding-console-panel) {
+  background-color:var(--surface);
+  color:var(--ink);
+}
+html[data-theme="dark"] :is(.coding-console-header,.coding-program-output section.coding-program-expected) {
+  background:var(--surface-soft);
+  color:var(--ink);
+}
+html[data-theme="dark"] :is(.coding-program-output pre,.coding-console-panel pre) {
+  background:#111a2b;
+  border-color:var(--line);
+  color:#d7def0;
+}
+html[data-theme="dark"] :is(.coding-program-output section.coding-program-actual.is-match) {
+  background:linear-gradient(110deg,#1a332d,#203b32);
+  border-color:#386451;
+}
+html[data-theme="dark"] :is(.coding-program-output section.coding-program-actual.is-mismatch) {
+  background:linear-gradient(110deg,#382729,#462c31);
+  border-color:#76404a;
+}
+
+/* Student lobby identity panel and its sign-out control. */
+.student-identity {
+  border-color:#e3def6;
+  background:linear-gradient(135deg,#faf9ff 0%,#f3f1ff 55%,#fbfaff 100%);
+}
+.student-identity h2 { color:#272441; }
+.student-lobby-logout {
+  display:inline-flex;
+  min-height:40px;
+  align-items:center;
+  justify-content:center;
+  padding:0 16px;
+  border:1px solid #d8d1f7;
+  border-radius:12px;
+  background:linear-gradient(115deg,#f0edff 0%,#e9e5ff 38%,#f8eafa 72%,#eeebff 100%);
+  background-size:220% 220%;
+  box-shadow:0 5px 16px #5546a212;
+  color:#5147bd;
+  font-size:13px;
+  font-weight:700;
+  text-decoration:none;
+  animation:lobby-logout-gradient 8s ease-in-out infinite alternate;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.student-lobby-logout:hover {
+  transform:translateY(-1px);
+  border-color:#b9adef;
+  box-shadow:0 8px 20px #5546a21c;
+  color:#40369f;
+}
+.student-lobby-logout:focus-visible { outline:2px solid #7567d9; outline-offset:3px; }
+@keyframes lobby-logout-gradient {
+  from { background-position:0% 50%; }
+  to { background-position:100% 50%; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .student-lobby-logout { animation:none; }
+}
+html[data-theme="dark"] .student-identity {
+  border-color:#3b365d;
+  background:linear-gradient(135deg,#1c2136 0%,#24213f 58%,#1b2438 100%);
+}
+html[data-theme="dark"] .student-identity h2 { color:var(--ink); }
+html[data-theme="dark"] .student-identity dt { color:#a7b2cb; }
+html[data-theme="dark"] .student-identity dd { color:#eef1ff; }
+html[data-theme="dark"] .student-lobby-logout {
+  border-color:#514878;
+  background:linear-gradient(115deg,#30294d 0%,#39305c 38%,#47304f 72%,#30294d 100%);
+  background-size:220% 220%;
+  box-shadow:0 5px 18px #07091660;
+  color:#ddd6ff;
+}
+html[data-theme="dark"] .student-lobby-logout:hover {
+  border-color:#8172c5;
+  box-shadow:0 8px 22px #07091680;
+  color:#fff;
+}

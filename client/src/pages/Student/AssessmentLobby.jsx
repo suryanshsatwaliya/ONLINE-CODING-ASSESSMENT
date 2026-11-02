@@ -110,7 +110,7 @@ export default function AssessmentLobby() {
           </div>
         )}
         <div className="card">
-          <div className="row end"><Link to="/login/student" onClick={logout}>Logout</Link></div>
+          <div className="row end"><Link className="student-lobby-logout" to="/login/student" onClick={logout}>Logout</Link></div>
           <span className="eyebrow">BEFORE YOU BEGIN</span>
           <section className="student-identity" aria-label="Your student details">
             <h2>Your details</h2>

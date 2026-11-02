@@ -312,7 +312,7 @@ test("sets enforce teacher ownership, question types, grading readiness and tota
   const invalid = await request(app).post("/api/question-sets").set(auth(token)).send({ ...body, questions: [mcq()] });
   assert.equal(invalid.status, 422);
   assert.equal((await request(app).post("/api/assessments").set(auth(token)).send({ ...exam, newQuestions: [codingQuestion()] })).status, 422);
-  for (const endpoint of ["/api/question-sets", "/api/questions/import/leetcode"]) {
+  for (const endpoint of ["/api/question-sets", "/api/questions/leetcode/import"]) {
     assert.equal((await request(app).post(endpoint).send(body)).status, 401);
     assert.equal((await request(app).post(endpoint).set(auth(studentToken)).send(body)).status, 403);
   }

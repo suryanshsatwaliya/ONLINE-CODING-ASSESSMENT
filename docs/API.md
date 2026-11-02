@@ -16,7 +16,7 @@ Error envelope: `{"success":false,"message":"...","errors":[]}`. Validation: 422
 | GET, POST | /questions | Teacher bank list/create |
 | PUT, DELETE | /questions/:id | Owner update/delete |
 | GET | /questions/reference?reference=LeetCode%2045 | Records reference metadata; no scraping |
-| POST | /questions/import/leetcode | Teacher imports public problem information without saving |
+| POST | /questions/leetcode/import | Teacher imports public problem information by LeetCode problem number, URL, or title slug without saving |
 | GET, POST | /question-sets | Teacher lists/creates reusable Quiz or Coding sets |
 | GET, PUT, DELETE | /question-sets/:id | Owner reads/edits/deletes sets; updates require revision |
 | GET, POST | /assessments | Scoped list / teacher create |

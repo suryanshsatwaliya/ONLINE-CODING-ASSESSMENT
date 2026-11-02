@@ -11,7 +11,7 @@ r.use(auth);
 r.use(teacher);
 r.get("/", c.list);
 r.get("/reference", c.reference);
-r.post("/import/leetcode", rateLimit({
+r.post("/leetcode/import", rateLimit({
   windowMs: 15 * 60 * 1000, limit: 30,
   message: { message: "Too many imports. Please wait before trying again.", errors: [] },
 }), c.importProblem);

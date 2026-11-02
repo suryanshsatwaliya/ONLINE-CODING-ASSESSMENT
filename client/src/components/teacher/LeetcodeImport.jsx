@@ -16,7 +16,7 @@ export default function LeetcodeImport({ value, onChange, onBusy, onImported }) 
     setError("");
     setWarnings([]);
     try {
-      const { data } = await api.post("/questions/import/leetcode", { reference });
+      const { data } = await api.post("/questions/leetcode/import", { reference });
       onChange({
         ...value,
         ...data.question,
@@ -36,9 +36,9 @@ export default function LeetcodeImport({ value, onChange, onBusy, onImported }) 
   return (
     <section className="leetcode-import">
       <h3>Import from LeetCode</h3>
-      <p>Enter a number to fill the statement, constraints and public examples. You can also write the problem manually below.</p>
+      <p>Enter a LeetCode problem number or URL to fill the statement, constraints and public examples. You can also write the problem manually below.</p>
       <div className="row wrap">
-        <Input label="LeetCode problem" placeholder="LeetCode 67" value={reference}
+        <Input label="Problem number or URL" placeholder="1 or https://leetcode.com/problems/two-sum/" value={reference}
           disabled={busy} onChange={(e) => setReference(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (reference.trim()) importProblem(); } }} />
         <Button type="button" disabled={busy || !reference.trim()} onClick={importProblem}>

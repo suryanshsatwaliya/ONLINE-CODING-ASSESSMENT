@@ -12,7 +12,7 @@ Each set and each assessment supports up to 100 questions. Set saves have a 5 MB
 
 ## LeetCode import
 
-Enter `67`, `LeetCode 67`, or `LeetCode #67` in a coding question's import box. The server resolves the public problem number against LeetCode's problem catalog, then fetches its public details. No user credentials are sent. Premium problems are rejected; provider errors leave the current question unchanged.
+Enter a LeetCode problem number, URL, or title slug in a coding question's import box (for example, `1`, `https://leetcode.com/problems/two-sum/`, or `two-sum`). Numeric IDs are resolved with LeetCode's public problem-list GraphQL query, then imported through the same problem-detail query used by URL/slug imports. No user credentials are sent. Premium problems are rejected; provider errors leave the current question unchanged. LeetCode controls this undocumented endpoint and can still deny requests, so URL/slug import remains a fallback if number lookup is unavailable.
 
 Import fills the title, statement, constraints, difficulty, tags, source URL, and public examples including explanations. Marks are preserved. Importing again replaces the question's content, sample cases and starter code, as indicated on the button.
 
@@ -24,7 +24,7 @@ Review imports before using them: special data structures, design problems, mult
 
 ## API
 
-`POST /api/questions/import/leetcode` accepts `{ "reference": "LeetCode 67" }` and returns `{ question, warnings }`. It requires teacher authentication and allows 30 requests per 15 minutes per IP. It does not save a question.
+`POST /api/questions/leetcode/import` accepts `{ "reference": "1" }`, `{ "reference": "https://leetcode.com/problems/two-sum/" }`, or `{ "reference": "two-sum" }` and returns `{ question, warnings }`. It requires teacher authentication and allows 30 requests per 15 minutes per IP. It does not save a question. LeetCode can deny its undocumented public queries; if that happens, the teacher can still import by URL/slug when that query is available, or enter the question manually.
 
 `GET/POST /api/question-sets` list or create teacher-owned sets. `GET/PUT/DELETE /api/question-sets/:id` read, update or delete owned sets. Updates require the current `revision`. A set contains `title`, `description`, `type` (QUIZ/CODING), and a validated `questions` array.
 

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { convertProblem, parseProblemNumber, plainText, importLeetcode } from "../src/services/leetcode.service.js";
+import { convertProblem, parseProblemSlug, plainText, importLeetcodeProblem } from "../src/services/leetcodeImport.service.js";
 import { assessmentSchema, questionSetSchema } from "../src/validators/assessment.validator.js";
 
 const problem = {
@@ -11,9 +11,9 @@ const problem = {
   metaData: JSON.stringify({ params: [{ name: "a", type: "string" }, { name: "b", type: "string" }], return: { type: "string" } }),
   topicTags: [{ name: "String" }],
 };
-test("problem number accepts friendly input and rejects arbitrary URLs", () => {
-  for (const value of ["67", "LeetCode 67", "leetcode #67"]) assert.equal(parseProblemNumber(value), "67");
-  for (const value of ["0", "-1", "https://example.com/67", "67 extra", "", {}]) assert.throws(() => parseProblemNumber(value));
+test("LeetCode importer accepts problem URLs and slugs, but not ambiguous numbers", () => {
+  for (const value of ["two-sum", "https://leetcode.com/problems/two-sum/", "leetcode.com/problems/two-sum/description/"]) assert.equal(parseProblemSlug(value), "two-sum");
+  for (const value of ["67", "https://example.com/problems/two-sum", "two sum", "", {}]) assert.throws(() => parseProblemSlug(value));
 });
 test("public examples become JSON stdin and visible cases, never fabricated hidden cases", () => {
   const result = convertProblem(problem);
@@ -55,26 +55,70 @@ test("example explanations survive import and non-runnable examples are preserve
   assert.equal(raw.question.testCases.length, 0);
   assert.equal(questionSetSchema.safeParse({ title: "Coding", type: "CODING", questions: [{ ...raw.question, marks: 10 }] }).success, true);
 });
-test("import adapter resolves the public number, keeps a fixed host and reports provider failures", async () => {
+test("import adapter fetches a problem directly by slug and reports provider failures", async () => {
   const original = global.fetch;
   const calls = [];
   let mode = "success";
   global.fetch = async (url, options) => {
     calls.push({ url, options });
     if (mode === "failure") throw new Error("Network down");
-    return { ok: true, json: async () => url.endsWith("/all/")
-      ? { stat_status_pairs: [{ stat: { frontend_question_id: 67, question__title_slug: "example-problem" }, paid_only: false }] }
-      : { data: { question: mode === "wrong" ? { ...problem, questionFrontendId: "68" } : problem } } };
+    return { ok: true, json: async () => ({ data: { question: problem } }) };
   };
   try {
-    const imported = await importLeetcode("LeetCode 67");
+    const imported = await importLeetcodeProblem("https://leetcode.com/problems/example-problem/");
     assert.equal(imported.question.title, "67. Example problem");
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 1);
     assert.ok(calls.every((call) => call.url.startsWith("https://leetcode.com/")));
-    assert.equal(JSON.parse(calls[1].options.body).variables.titleSlug, "example-problem");
-    mode = "wrong";
-    await assert.rejects(() => importLeetcode("67"), /different problem/);
+    assert.equal(JSON.parse(calls[0].options.body).variables.titleSlug, "example-problem");
     mode = "failure";
-    await assert.rejects(() => importLeetcode("67"), /unavailable or blocked/);
+    await assert.rejects(() => importLeetcodeProblem("example-problem"), /could not be reached/);
+  } finally { global.fetch = original; }
+});
+test("numeric LeetCode references resolve the exact frontend ID before fetching details", async () => {
+  const original = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ url, options });
+    const payload = JSON.parse(options.body);
+    if (payload.operationName === "problemsetQuestionListV2") {
+      return { ok: true, json: async () => ({ data: { problemsetQuestionListV2: { questions: [
+        { questionFrontendId: "10", titleSlug: "regular-expression-matching", title: "Regular Expression Matching", paidOnly: false },
+        { questionFrontendId: "1", titleSlug: "two-sum", title: "Two Sum", paidOnly: false },
+      ] } } }) };
+    }
+    return { ok: true, json: async () => ({ data: { question: { ...problem, questionFrontendId: "1", title: "Two Sum", titleSlug: "two-sum" } } }) };
+  };
+  try {
+    const imported = await importLeetcodeProblem("1");
+    assert.equal(imported.question.externalReference, "https://leetcode.com/problems/two-sum/");
+    assert.equal(calls.length, 2);
+    assert.equal(JSON.parse(calls[0].options.body).variables.searchKeyword, "1");
+    assert.equal(JSON.parse(calls[1].options.body).variables.titleSlug, "two-sum");
+  } finally { global.fetch = original; }
+});
+test("numeric LeetCode lookup falls back to catalog pages when keyword search omits the ID", async () => {
+  const original = global.fetch;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push(JSON.parse(options.body));
+    const payload = JSON.parse(options.body);
+    if (payload.operationName === "problemsetQuestionListV2") {
+      const isSearch = Boolean(payload.variables.searchKeyword);
+      return { ok: true, json: async () => ({ data: { problemsetQuestionListV2: {
+        questions: isSearch
+          ? [{ questionFrontendId: "10", titleSlug: "regular-expression-matching", title: "Regular Expression Matching", paidOnly: false }]
+          : [{ questionFrontendId: "67", titleSlug: "add-binary", title: "Add Binary", paidOnly: false }],
+        totalLength: isSearch ? 1 : 1,
+        hasMore: false,
+      } } }) };
+    }
+    return { ok: true, json: async () => ({ data: { question: { ...problem, questionFrontendId: "67", title: "Add Binary", titleSlug: "add-binary" } } }) };
+  };
+  try {
+    const imported = await importLeetcodeProblem("67");
+    assert.equal(imported.question.title, "67. Add Binary");
+    assert.equal(calls.length, 3);
+    assert.equal(calls[0].variables.searchKeyword, "67");
+    assert.equal(calls[1].variables.searchKeyword, null);
   } finally { global.fetch = original; }
 });

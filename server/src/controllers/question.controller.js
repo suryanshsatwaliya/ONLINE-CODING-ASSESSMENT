@@ -1,8 +1,8 @@
 import { Question } from "../models/index.js";
 import ApiError from "../utils/ApiError.js";
-import { importLeetcode } from "../services/leetcode.service.js";
+import { importLeetcodeProblem } from "../services/leetcodeImport.service.js";
 export async function importProblem(req, res) {
-  res.json(await importLeetcode(req.body.reference));
+  res.json(await importLeetcodeProblem(req.body.reference));
 }
 export async function list(req, res) {
   res.json(

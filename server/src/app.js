@@ -22,6 +22,7 @@ app.use(cors({ origin: env.CLIENT_URL }));
 // Bulk assessment authoring includes complete statements, starter code and tests.
 app.use("/api/assessments", express.json({ limit: "5mb" }));
 app.use("/api/question-sets", express.json({ limit: "5mb" }));
+app.use("/api/students", express.json({ limit: "2mb" }));
 app.use(express.json({ limit: "256kb" }));
 app.use("/api", apiLimit);
 app.get("/api/health", (req, res) =>

@@ -7,3 +7,6 @@ export const studentSchema = z.object({
   email: z.union([z.string().email(), z.literal("")]).optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
 });
+export const studentBulkSchema = z.object({
+  students: z.array(studentSchema).min(1).max(500),
+});

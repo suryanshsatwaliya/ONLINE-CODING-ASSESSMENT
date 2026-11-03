@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Download } from "lucide-react";
 import { studentService as service } from "../../services/studentService";
 import { errorMessage } from "../../services/api";
 import { useToast } from "../../components/common/Toast";
@@ -7,17 +8,12 @@ import Input from "../../components/common/Input";
 import Modal from "../../components/common/Modal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import StudentTable from "../../components/teacher/StudentTable";
-const blank = {
-  uid: "",
-  name: "",
-  course: "",
-  section: "",
-  email: "",
-  status: "ACTIVE",
-};
+import BulkStudentModal from "../../components/teacher/BulkStudentModal";
+import { makeStudentWorkbook } from "../../utils/studentWorkbook";
 export default function Students() {
   const [rows, R] = useState([]),
     [form, F] = useState(null),
+    [bulkOpen, setBulkOpen] = useState(false),
     [search, S] = useState(""),
     [course, C] = useState(""),
     [section, Sec] = useState(""),
@@ -45,6 +41,19 @@ export default function Students() {
       toast(errorMessage(e));
     }
   }
+  const sectionStudents = rows
+    .filter((student) => student.section === section)
+    .sort((a, b) => a.uid.localeCompare(b.uid, undefined, { numeric: true, sensitivity: "base" }));
+  const visibleSectionStudents = sectionStudents
+    .filter((student) => (student.name + student.uid).toLowerCase().includes(search.toLowerCase()) && (!course || student.course === course) && (!status || student.status === status));
+  function downloadSectionCsv() {
+    const url = URL.createObjectURL(makeStudentWorkbook(sectionStudents));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `students-${section.replace(/[^a-z0-9_-]+/gi, "-")}.xlsx`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
   return (
     <>
       <div className="page-title">
@@ -53,7 +62,9 @@ export default function Students() {
           <h1>Students</h1>
           <p>Manage identities and assessment access.</p>
         </div>
-        <Button onClick={() => F({ ...blank })}>+ Add student</Button>
+        <div className="students-page-actions">
+          <Button type="button" onClick={() => setBulkOpen(true)}>Add student</Button>
+        </div>
       </div>
       <div className="filters">
         <input
@@ -88,16 +99,9 @@ export default function Students() {
       <div className="card">
         {section ? (
           <div className="student-results-transition" key={section}>
+            <div className="student-section-toolbar"><div><strong>{section}</strong><span>{sectionStudents.length} student{sectionStudents.length === 1 ? "" : "s"}</span></div><Button type="button" variant="secondary" onClick={downloadSectionCsv}><Download size={15} />Download Excel</Button></div>
             <StudentTable
-              students={rows
-                .filter(
-                  (s) =>
-                    (s.name + s.uid).toLowerCase().includes(search.toLowerCase()) &&
-                    (!course || s.course === course) &&
-                    s.section === section &&
-                    (!status || s.status === status),
-                )
-                .sort((a, b) => a.uid.localeCompare(b.uid, undefined, { numeric: true, sensitivity: "base" }))}
+              students={visibleSectionStudents}
               onEdit={F}
               onDelete={D}
             />
@@ -110,13 +114,15 @@ export default function Students() {
         <Modal
           title={form._id ? "Edit student" : "Add student"}
           onClose={() => F(null)}
+          className="student-editor-modal"
         >
           <form onSubmit={save}>
             <div className="form-grid">
-              {["uid", "name", "course", "section", "email"].map((k) => (
+              {[["uid", "UID", "24BCS10000"], ["name", "NAME", "e.g. Aarav Sharma"], ["course", "COURSE", "e.g. B.Tech CSE"], ["section", "SECTION", "e.g. CSE-A"], ["email", "EMAIL", "e.g. student@example.com"]].map(([k, label, placeholder]) => (
                 <Input
                   key={k}
-                  label={k.toUpperCase()}
+                  label={label}
+                  placeholder={placeholder}
                   required={k !== "email"}
                   type={k === "email" ? "email" : "text"}
                   value={form[k] || ""}
@@ -138,6 +144,7 @@ export default function Students() {
           </form>
         </Modal>
       )}
+      {bulkOpen && <BulkStudentModal onClose={() => setBulkOpen(false)} onSaved={(count) => { setBulkOpen(false); load(); toast(`${count} students added successfully`); }} />}
       {del && (
         <ConfirmDialog
           onClose={() => D(null)}

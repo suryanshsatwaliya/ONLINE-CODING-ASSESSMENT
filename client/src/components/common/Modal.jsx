@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
-export default function Modal({ title, children, onClose, className = "" }) {
+export default function Modal({ title, children, onClose, className = "", headerActions = null }) {
   const insetScroll = className.split(/\s+/).includes("submission-details-modal");
   useEffect(() => {
     const f = (e) => {
@@ -29,6 +29,7 @@ export default function Modal({ title, children, onClose, className = "" }) {
       >
         <div className="row between modal-heading">
           <h2>{title}</h2>
+          {headerActions}
           {onClose && (
             <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close event history">
               <X size={18} strokeWidth={2.2} aria-hidden="true" />

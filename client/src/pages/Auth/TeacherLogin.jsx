@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CheckCircle2, Code2, GraduationCap, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, GraduationCap, ShieldCheck } from "lucide-react";
 import { authService } from "../../services/authService";
 import { errorMessage } from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
@@ -8,7 +8,6 @@ import { useTheme } from "../../context/ThemeContext";
 import Navbar from "../../components/layout/Navbar";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
-import { useTypingReplay } from "../../hooks/useTypingReplay";
 
 let turnstileScriptPromise;
 function loadTurnstile() {
@@ -69,24 +68,52 @@ function TurnstileWidget({ siteKey, theme, onToken, resetRef }) {
   </div>;
 }
 
+const teacherCodeLines = [
+  [{ text: "function", className: "code-keyword" }, { text: " solveChallenge", className: "code-function" }, { text: "() {" }],
+  [{ text: "const", className: "code-constant" }, { text: " answer = " }, { text: "buildSolution", className: "code-function" }, { text: "();" }],
+  [{ text: "return", className: "code-keyword" }, { text: " " }, { text: "validate", className: "code-function" }, { text: "(answer);" }],
+  [{ text: "}" }],
+];
+const teacherCodeLength = teacherCodeLines.flat().reduce((total, segment) => total + segment.text.length, 0);
+
 export default function TeacherLogin() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [captchaConfig, setCaptchaConfig] = useState(null);
   const [captchaToken, setCaptchaToken] = useState("");
+  const [visibleCodeLetters, setVisibleCodeLetters] = useState(0);
   const resetCaptchaRef = useRef(null);
   const { login } = useAuth();
   const nav = useNavigate();
   const { theme } = useTheme();
-  const typingReplayKey = useTypingReplay(6650);
 
   useEffect(() => {
     let active = true;
+    // Start the Cloudflare download alongside the config request so the two
+    // network waits do not block each other.
+    loadTurnstile().catch(() => {});
     authService.teacherCaptchaConfig()
       .then(({ data }) => { if (active) setCaptchaConfig(data); })
       .catch(() => { if (active) setCaptchaConfig({ enabled: false, unavailable: true }); });
     return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let timer;
+    let letter = 0;
+    const typeNextLetter = () => {
+      letter += 1;
+      setVisibleCodeLetters(letter);
+      if (letter < teacherCodeLength) timer = window.setTimeout(typeNextLetter, 35);
+      else timer = window.setTimeout(() => {
+        letter = 0;
+        setVisibleCodeLetters(0);
+        timer = window.setTimeout(typeNextLetter, 350);
+      }, 3000);
+    };
+    timer = window.setTimeout(typeNextLetter, 350);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const handleCaptchaToken = useCallback((token) => {
@@ -121,35 +148,28 @@ export default function TeacherLogin() {
       <div className="teacher-login-layout">
         <section className="teacher-login-story">
           <Link className="teacher-login-back portal-return-link" to="/"><ArrowLeft size={16} /> Back to portals</Link>
-          <span className="teacher-login-kicker"><Sparkles size={15} /> YOUR CLASSROOM, IN FOCUS</span>
-          <h1>Turn good questions into <span>great progress.</span></h1>
-          <p className="teacher-login-intro">Create thoughtful assessments, bring coding practice into class, and see how every student is doing.</p>
-          <div className="teacher-login-points">
-            <span><CheckCircle2 size={17} /> Build quiz and coding assessments</span>
-            <span><CheckCircle2 size={17} /> Keep student work and progress together</span>
-          </div>
-          <div className="teacher-code-stage">
-            <span className="teacher-floating-snippet teacher-snippet-one" aria-hidden="true">{`{ class: "focused" }`}</span>
-            <span className="teacher-floating-snippet teacher-snippet-two" aria-hidden="true">grade(submissions)</span>
-            <div className="teacher-code-card" aria-label="Decorative assessment code preview" role="img">
-              <div className="teacher-code-header"><span><Code2 size={16} /> classroom.py</span><span>•••</span></div>
-              <div key={typingReplayKey} className="teacher-code-lines" aria-hidden="true">
-                <div><span>01</span><code style={{ "--type-steps": 24, "--type-delay": ".1s" }}><b>assessment</b> = create_quiz()</code></div>
-                <div><span>02</span><code style={{ "--type-steps": 31, "--type-delay": ".75s" }}><b>assessment</b>.add_coding_task()</code></div>
-                <div><span>03</span><code style={{ "--type-steps": 34, "--type-delay": "1.4s" }}><em>for</em> student <em>in</em> classroom:</code></div>
-                <div className="teacher-code-active-line"><span>04</span><code className="teacher-code-indent" style={{ "--type-steps": 27, "--type-delay": "2.05s" }}>review(student.progress)</code><i className="teacher-code-caret" /></div>
-              </div>
-              <div className="teacher-code-output"><span><CheckCircle2 size={14} /> Workspace ready</span><span className="teacher-code-pulse" /></div>
+          <h1>Manage your assessments <span>in one place.</span></h1>
+          <div className="teacher-login-code-stage" aria-hidden="true">
+            <span className="teacher-login-floating-snippet teacher-login-floating-top">&#123; focus: true &#125;</span>
+            <div className="teacher-login-code">
+            <div className="teacher-login-code-top"><span className="teacher-login-code-dots"><i /><i /><i /></span><span>challenge.js</span><span className="teacher-login-code-status">● LIVE</span></div>
+            <div className="teacher-login-code-body">
+              {(() => { let offset = 0; return teacherCodeLines.map((line, lineIndex) => <span className={`code-line ${lineIndex === 1 || lineIndex === 2 ? "indent" : ""}`} key={lineIndex}><i>0{lineIndex + 1}</i>{line.map((segment, segmentIndex) => { const start = offset; offset += segment.text.length; return <span className={segment.className || ""} key={segmentIndex}>{[...segment.text].map((character, characterIndex) => <span className={`typing-char ${start + characterIndex < visibleCodeLetters ? "is-visible" : ""}`} key={characterIndex}>{character}</span>)}</span>; })}</span>); })()}
             </div>
+            <div className="teacher-login-code-foot"><span><CheckCircle2 size={14} /> Ready to run</span><span>JavaScript · Assessment</span></div>
+            </div>
+            <span className="teacher-login-floating-snippet teacher-login-floating-bottom">solve();</span>
           </div>
-          <div className="teacher-login-note"><ShieldCheck size={17} /><span>Your assessments, students, and class insights in one workspace.</span></div>
+          <p className="teacher-login-intro"><span className="teacher-login-intro-kicker">YOUR CLASSROOM, IN SYNC</span>From first question to final result, keep every part of the learning journey moving together.</p>
+          <div className="teacher-login-points">
+            <span><CheckCircle2 size={17} /><strong>Create with confidence</strong><small>Quizzes and coding challenges, one workspace.</small></span>
+            <span><CheckCircle2 size={17} /><strong>See every breakthrough</strong><small>Student work and progress, all in sync.</small></span>
+          </div>
         </section>
 
         <form className="teacher-login-card card" onSubmit={submit}>
           <div className="teacher-login-card-icon"><GraduationCap size={22} /></div>
-          <span className="eyebrow">TEACHER WORKSPACE</span>
-          <h2>Welcome back.</h2>
-          <p>Sign in to manage your assessments.</p>
+          <h2>Sign in</h2>
           <fieldset disabled={busy} className="teacher-login-fields">
             <Input
               label="Email address"
@@ -177,7 +197,7 @@ export default function TeacherLogin() {
             <span>{captchaConfig?.unavailable ? "Human verification settings could not be loaded. Refresh the page and try again." : "Human verification is not configured for this environment."}</span>
           </div>}
           <Button type="submit" disabled={busy || !captchaConfig || captchaConfig.unavailable || (captchaConfig.enabled && !captchaToken)}>
-            {busy ? "Signing in…" : <>Teacher Login <ArrowRight size={17} /></>}
+            {busy ? "Signing in…" : <>Sign in <ArrowRight size={17} /></>}
           </Button>
         </form>
       </div>

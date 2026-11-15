@@ -16,6 +16,19 @@ export async function list(req, res) {
       .populate("attempt", "warningCount status submittedAt"),
   );
 }
+export async function dashboard(req, res) {
+  const assessmentIds = await Assessment.find({ createdBy: req.user.id }).distinct("_id");
+  const [stats, recent] = await Promise.all([
+    Result.aggregate([
+      { $match: { assessment: { $in: assessmentIds } } },
+      { $group: { _id: null, count: { $sum: 1 }, averageScore: { $avg: "$percentage" } } },
+    ]),
+    Result.find({ assessment: { $in: assessmentIds } })
+      .sort({ gradedAt: -1 }).limit(5)
+      .populate("student", "name uid").populate("attempt", "status"),
+  ]);
+  res.json({ count: stats[0]?.count || 0, averageScore: stats[0]?.averageScore ?? null, recent });
+}
 export async function mine(req, res) {
   const t = await Attempt.findOne({
     _id: req.params.id,

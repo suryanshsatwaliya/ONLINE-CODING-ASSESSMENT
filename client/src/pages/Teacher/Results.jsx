@@ -32,7 +32,6 @@ export default function Results() {
     <>
       <div className="page-title">
         <div>
-          <span className="eyebrow">LEARNING INSIGHTS</span>
           <h1>Results & analytics</h1>
           <p>Deterministic scores with separately approved AI rubric marks.</p>
         </div>

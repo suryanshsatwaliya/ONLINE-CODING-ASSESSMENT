@@ -8,10 +8,10 @@ export default function Navbar({ actions }) {
         <span className="brand-icon">
           <ShieldCheck size={22} />
         </span>
-        Assess<span className="muted"> / Portal</span>
+        <span className="brand-copy"><strong>AStarCoders</strong><small>Where Skills Reach the Stars.</small></span>
       </Link>
       {actions ?? (
-        <div className="navbar-actions"><span className="eyebrow">LEARN. ASSESS. GROW.</span><ThemeToggle /></div>
+        <div className="navbar-actions"><ThemeToggle /></div>
       )}
     </nav>
   );

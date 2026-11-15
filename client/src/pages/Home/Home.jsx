@@ -3,8 +3,6 @@ import {
   Activity,
   ArrowRight,
   ArrowUpRight,
-  Braces,
-  CheckCircle2,
   ChevronDown,
   Code2,
   Github,
@@ -13,10 +11,10 @@ import {
   Eye,
   ClipboardCheck,
   ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
 import Navbar from "../../components/layout/Navbar";
 import ThemeToggle from "../../components/common/ThemeToggle";
-import { useTypingReplay } from "../../hooks/useTypingReplay";
 
 const features = [
   {
@@ -80,35 +78,23 @@ function SignInMenu() {
 }
 
 function CodePreview() {
-  const typingReplayKey = useTypingReplay(7150);
   return (
-    <div className="landing-visual" aria-label="Decorative coding workspace preview" role="img">
-      <div className="landing-orbit landing-orbit-one"><span>{"{ }"}</span></div>
-      <div className="landing-orbit landing-orbit-two"><span>&lt;/&gt;</span></div>
+    <div className="landing-visual" aria-label="Animated coding workspace preview">
+      <div className="landing-orbit landing-orbit-one"><span>&lt;/&gt;</span></div>
+      <div className="landing-orbit landing-orbit-two"><span>{"{ }"}</span></div>
       <div className="landing-code-window">
-        <div className="landing-code-topbar">
-          <span className="landing-window-dots"><i /><i /><i /></span>
-          <span><Braces size={15} /> solution.py</span>
-          <span className="landing-code-status"><span /> Ready</span>
-        </div>
-        <div key={typingReplayKey} className="landing-code-body" aria-hidden="true">
-          <div><span>01</span><code style={{ "--type-steps": 22, "--type-delay": "0.1s" }}><b>def</b> solve(challenge):</code></div>
-          <div><span>02</span><code className="indent" style={{ "--type-steps": 31, "--type-delay": "0.75s" }}><b>questions</b> = challenge.questions</code></div>
-          <div><span>03</span><code className="indent" style={{ "--type-steps": 29, "--type-delay": "1.45s" }}><b>for</b> question <b>in</b> questions:</code></div>
-          <div><span>04</span><code className="indent-more" style={{ "--type-steps": 18, "--type-delay": "2.1s" }}>attempt(question)</code></div>
-          <div><span>05</span><code style={{ "--type-steps": 16, "--type-delay": "2.55s" }}><em>return</em> progress</code></div>
-          <div className="landing-code-cursor-line"><span>06</span><code className="landing-code-cursor">_</code></div>
+        <div className="landing-code-topbar"><span className="landing-window-dots"><i /><i /><i /></span><span><Code2 size={15} /> solution.py</span><span className="landing-code-status"><span /> RUNNING</span></div>
+        <div className="landing-code-body">
+          <div><span>01</span><code style={{ "--type-delay": "0s" }}><b>def</b> solve_challenge(problem):</code></div>
+          <div><span>02</span><code style={{ "--type-delay": ".65s" }} className="indent">questions = problem.questions</code></div>
+          <div><span>03</span><code style={{ "--type-delay": "1.3s" }} className="indent"><b>for</b> question <em>in</em> questions:</code></div>
+          <div><span>04</span><code style={{ "--type-delay": "1.95s" }} className="indent-more">solve(question)</code></div>
+          <div><span>05</span><code style={{ "--type-delay": "2.6s" }}><b>return</b> progress.track(problem)</code></div>
         </div>
         <div className="landing-code-footer"><span><CheckCircle2 size={14} /> All changes saved</span><span>Python 3</span></div>
       </div>
-      <div className="landing-float-card landing-float-progress">
-        <span className="landing-float-icon"><CheckCircle2 size={17} /></span>
-        <span><strong>Progress, made clear</strong><small>Every question in view</small></span>
-      </div>
-      <div className="landing-float-card landing-float-score">
-        <span className="landing-score-bars"><i /><i /><i /><i /></span>
-        <span><strong>Thoughtful practice</strong><small>Learn by doing</small></span>
-      </div>
+      <div className="landing-float-card landing-float-progress"><span className="landing-float-icon"><CheckCircle2 size={19} /></span><span><strong>Progress, made clear</strong><small>Every question in view</small></span></div>
+      <div className="landing-float-card landing-float-score"><span className="landing-score-bars"><i /><i /><i /><i /></span><span><strong>Thoughtful practice</strong><small>Learn by doing</small></span></div>
     </div>
   );
 }
@@ -121,18 +107,14 @@ export default function Home() {
         <section className="landing-hero">
           <div className="landing-hero-grid">
             <div className="landing-copy">
-              <span className="landing-kicker"><span /> ASSESS. PRACTICE. PROGRESS.</span>
-              <h1>Make every question a <span>step forward.</span></h1>
+              <span className="landing-kicker">QUIZ, CODING & CLASS PROGRESS</span>
+              <h1>Create assessments. <span>See student progress.</span></h1>
               <p className="landing-intro">
-                A calmer, clearer way to create assessments, solve coding challenges, and see learning take shape.
+                Build quiz and coding assessments, guide students through focused practice, and review class results in one place.
               </p>
               <div className="landing-hero-actions">
-                <Link className="landing-primary-link" to="/login/student">I’m a student <ArrowRight size={18} /></Link>
-                <Link className="landing-secondary-link" to="/login/teacher">Teacher workspace <ArrowUpRight size={17} /></Link>
-              </div>
-              <div className="landing-proof-row">
-                <span><CheckCircle2 size={16} /> Quiz and coding assessments</span>
-                <span><CheckCircle2 size={16} /> Built for focused learning</span>
+                <Link className="landing-primary-link" to="/login/teacher">Open teacher workspace <ArrowRight size={18} /></Link>
+                <Link className="landing-secondary-link" to="/login/student">Join an assessment <ArrowUpRight size={17} /></Link>
               </div>
             </div>
             <CodePreview />
@@ -142,15 +124,14 @@ export default function Home() {
 
         <section className="landing-features" id="features">
           <div className="landing-section-heading">
-            <span className="landing-section-kicker">ONE PORTAL, TWO SIDES OF LEARNING</span>
-            <h2>Everything you need to teach and learn.</h2>
+            <span className="landing-section-kicker">A CLEAR WORKFLOW FOR YOUR CLASS</span>
+            <h2>From question creation to class results.</h2>
             <p>Purpose-built tools make assessments easier to create, take, and review.</p>
           </div>
           <div className="landing-feature-grid">
-            {features.map(({ icon: Icon, title, description }, index) => (
+            {features.map(({ icon: Icon, title, description }) => (
               <article className="landing-feature-card" key={title}>
                 <div className="landing-feature-icon"><Icon size={21} /></div>
-                <span className="landing-feature-index">0{index + 1}</span>
                 <h3>{title}</h3>
                 <p>{description}</p>
               </article>
@@ -160,16 +141,15 @@ export default function Home() {
 
         <section className="landing-safeguards" id="security">
           <div className="landing-safeguards-heading">
-            <span className="landing-section-kicker">DESIGNED FOR THE CLASSROOM</span>
+            <span className="landing-section-kicker">CLASSROOM CONTROLS</span>
             <h2>Structure for teachers. Focus for students.</h2>
             <p>Set expectations before an assessment, then follow progress and review work in one place.</p>
           </div>
           <div className="landing-safeguards-grid">
-            {safeguards.map(({ icon: Icon, title, description }, index) => (
+            {safeguards.map(({ icon: Icon, title, description }) => (
               <article className="landing-safeguard-card" key={title}>
                 <span className="landing-safeguard-icon"><Icon size={19} /></span>
                 <div>
-                  <span className="landing-safeguard-index">0{index + 1}</span>
                   <h3>{title}</h3>
                   <p>{description}</p>
                 </div>
@@ -182,7 +162,7 @@ export default function Home() {
       <footer className="landing-footer-redesign">
         <div className="landing-footer-main">
           <div className="landing-footer-about">
-            <Link to="/" className="landing-footer-brand"><span className="brand-icon"><ShieldCheck size={19} /></span> Assess <i>/</i> Portal</Link>
+            <Link to="/" className="landing-footer-brand"><span className="brand-icon"><ShieldCheck size={19} /></span> AStarCoders</Link>
             <p>One thoughtful workspace to create assessments, solve coding challenges, and understand student progress.</p>
           </div>
           <div className="landing-footer-links">
@@ -200,7 +180,7 @@ export default function Home() {
             </a>
           </div>
         </div>
-        <div className="landing-footer-bottom"><span>Built to help classrooms learn with confidence.</span><span>© {new Date().getFullYear()} Assess / Portal</span></div>
+        <div className="landing-footer-bottom"><span>Built to help classrooms learn with confidence.</span><span>© {new Date().getFullYear()} AStarCoders</span></div>
       </footer>
     </div>
   );

@@ -19,24 +19,25 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth(),
     toast = useToast();
-  const [data, D] = useState({ students: [], assessments: [], results: [] });
+  const [data, D] = useState({ students: [], assessments: [], results: [], resultCount: 0, averageScore: null });
+  const [loading, setLoading] = useState(true);
   const [reuseId, setReuseId] = useState(null);
   useAssessmentUpdates(useCallback(() => {
     api.get("/assessments").then(({ data: assessments }) => D((previous) => ({ ...previous, assessments }))).catch(() => {});
   }, []));
   useEffect(() => {
-    Promise.all([api.get("/students"), api.get("/assessments")])
-      .then(async ([s, a]) => {
-        const r = await Promise.all(
-          a.data.map((x) => api.get("/results/" + x._id)),
-        );
+    Promise.all([api.get("/students"), api.get("/assessments"), api.get("/results/dashboard")])
+      .then(([s, a, { data: summary }]) => {
         D({
           students: s.data,
           assessments: a.data,
-          results: r.flatMap((x) => x.data),
+          results: summary.recent,
+          resultCount: summary.count,
+          averageScore: summary.averageScore,
         });
       })
-      .catch((e) => toast(errorMessage(e)));
+      .catch((e) => toast(errorMessage(e)))
+      .finally(() => setLoading(false));
   }, []);
   const a = data.assessments,
     r = data.results;
@@ -45,11 +46,11 @@ export default function Dashboard() {
     ["Active assessments", a.filter((x) => x.status === "LIVE").length, Radio],
     ["Scheduled", a.filter((x) => x.status === "SCHEDULED").length, Calendar],
     ["Completed", a.filter((x) => x.status === "ENDED").length, CheckCircle],
-    ["Total submissions", r.length, FileCheck],
+    ["Total submissions", data.resultCount, FileCheck],
     [
       "Average score",
-      r.length
-        ? (r.reduce((s, x) => s + x.percentage, 0) / r.length).toFixed(1) + "%"
+      data.averageScore != null
+        ? data.averageScore.toFixed(1) + "%"
         : "—",
       BarChart3,
     ],
@@ -67,33 +68,35 @@ export default function Dashboard() {
         </Link>
         </div>
       </div>
-      <div className="stats dashboard-stats">
+      <div className="stats dashboard-stats" aria-busy={loading}>
         {stats.map(([label, value, Icon]) => (
           <div className="stat card dashboard-stat" key={label}>
             <div className="row between">
               <span>{label}</span>
               <Icon size={19} />
             </div>
-            <strong>{value}</strong>
+            <strong>{loading ? <span className="metric-skeleton" aria-label="Loading" /> : value}</strong>
           </div>
         ))}
       </div>
       <div className="row between dashboard-section-heading">
-        <div><span className="eyebrow">WORKSPACE</span><h2>Recent assessments</h2></div>
+        <div><h2>Recent assessments</h2></div>
         <Link to="/teacher/assessments">View all →</Link>
       </div>
-      <div className="grid three dashboard-assessments">
+      {loading ? <div className="grid three dashboard-assessments" aria-label="Loading assessments" aria-busy="true">
+        {[0, 1, 2].map((item) => <div className="dashboard-skeleton-card" key={item}><span /><span /><span /></div>)}
+      </div> : <div className="grid three dashboard-assessments">
         {a.slice(0, 6).map((x) => (
           <AssessmentCard assessment={x} key={x._id} onReuse={setReuseId} onDeleted={(id) => D((previous) => ({ ...previous, assessments: previous.assessments.filter((item) => item._id !== id) }))} />
         ))}
-      </div>
-      {!a.length && (
+      </div>}
+      {!loading && !a.length && (
         <div className="card empty">
           Your next great assessment starts here. Create one above.
         </div>
       )}
       <div className="row between dashboard-section-heading dashboard-overview-heading">
-        <div><span className="eyebrow">LATEST ACTIVITY</span><h2>Workspace overview</h2></div>
+        <div><h2>Workspace overview</h2></div>
       </div>
       <div className="grid three dashboard-overview">
         <div className="card dashboard-widget">
@@ -129,7 +132,6 @@ export default function Dashboard() {
             ))}
         </div>
         <div className="card dashboard-widget dashboard-active-students">
-          <span className="eyebrow">STUDENT ACCOUNTS</span>
           <strong>{data.students.filter((student) => student.status === "ACTIVE").length}</strong>
           <h2>Active students</h2>
           <p>Authorized accounts in your workspace.</p>

@@ -1,6 +1,6 @@
-# Assess / Portal
+# AStarCoders
 
-Assess / Portal is a web app for creating and taking classroom assessments. Teachers build quizzes, coding challenges, or mixed assessments, assign them to students, monitor active attempts, and review results. Students sign in with their UID and an assessment access code, then answer questions or work in the built-in code editor.
+AStarCoders is a web app for creating and taking classroom assessments. Teachers build quizzes, coding challenges, or mixed assessments, assign them to students, monitor active attempts, and review results. Students sign in with their UID and an assessment access code, then answer questions or work in the built-in code editor.
 
 ## What you can do
 

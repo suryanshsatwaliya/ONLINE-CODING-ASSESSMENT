@@ -58,7 +58,6 @@ export default function Students() {
     <>
       <div className="page-title">
         <div>
-          <span className="eyebrow">YOUR COMMUNITY</span>
           <h1>Students</h1>
           <p>Manage identities and assessment access.</p>
         </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, ClipboardList, Radio, CalendarDays, FileEdit, ArrowUpRight, Layers3, CheckCircle2 } from "lucide-react";
+import { Plus, Search, ClipboardList, Radio, CalendarDays, FileEdit, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { assessmentService } from "../../services/assessmentService";
 import { errorMessage } from "../../services/api";
 import AssessmentCard from "../../components/teacher/AssessmentCard";
@@ -29,7 +29,7 @@ export default function Assessments() {
   return (
     <div className="assessment-hub">
       <header className="ah-heading">
-        <div><span className="ah-kicker"><Layers3 size={14} /> YOUR ASSESSMENT WORKSPACE</span><h1>Good assessments.<br /><span>Better learning.</span></h1><p>Create a challenge, bring your students together, and follow their progress.</p></div>
+        <div><h1>Assessments</h1><p>Create, schedule, and review quiz and coding assessments.</p></div>
         <Link className="btn ah-create" to="/teacher/assessments/new"><Plus size={18} /> Create assessment</Link>
       </header>
       <div className="ah-metrics" aria-label="Assessment overview">

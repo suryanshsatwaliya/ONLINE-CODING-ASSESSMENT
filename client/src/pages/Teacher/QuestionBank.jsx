@@ -30,7 +30,7 @@ export default function QuestionBank() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const load = () =>
-    Promise.all([api.get("/questions"), api.get("/question-sets")])
+    Promise.all([api.get("/questions?summary=true"), api.get("/question-sets")])
       .then(([questions, questionSets]) => { R(questions.data); setSets(questionSets.data); setLoadError(""); })
       .catch((e) => setLoadError(errorMessage(e)))
       .finally(() => setLoading(false));
@@ -61,7 +61,6 @@ export default function QuestionBank() {
     <>
       <div className="page-title">
         <div>
-          <span className="eyebrow">REUSABLE LEARNING CONTENT</span>
           <h1>Question bank</h1>
           <p>Your reusable quizzes and coding sets. Create, edit and keep them here.</p>
         </div>
@@ -102,6 +101,7 @@ export default function QuestionBank() {
             </div>
             <div className="bank-card-footer"><div className="bank-card-meta"><strong>{set.totalMarks}</strong><span>marks</span>{!set.readyForAssessment && <small>Needs required grading test cases</small>}</div>
               <div className="bank-card-actions">
+                {set.type === "CODING" && set.questionCount > 0 && <Link className="bank-action-test" to={`/teacher/questions/sets/${set._id}/test/0`}><Play size={14} />Test</Link>}
                 <Link className="bank-action-edit" to={"/teacher/questions/sets/" + set._id}><PencilLine size={14} />Edit</Link>
                 <button className="bank-action-delete" onClick={() => D({ ...set, isSet: true })}><Trash2 size={14} />Delete</button>
               </div>
@@ -132,7 +132,10 @@ export default function QuestionBank() {
               </div>
               <div className="bank-card-actions">
                 {q.type === "CODING" && <Link className="bank-action-test" to={`/teacher/questions/${q._id}/test`}><Play size={14} />Test</Link>}
-                <button className="bank-action-edit" onClick={() => Q(q)}><PencilLine size={14} />Edit</button>
+                <button className="bank-action-edit" onClick={async () => {
+                  try { Q((await api.get("/questions/" + q._id)).data); }
+                  catch (e) { toast(errorMessage(e)); }
+                }}><PencilLine size={14} />Edit</button>
                 <button className="bank-action-delete" onClick={() => D(q)}><Trash2 size={14} />Delete</button>
               </div>
             </div>

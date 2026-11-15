@@ -29,20 +29,17 @@ export default function Sidebar() {
         <span className="brand-icon">
           <ShieldCheck />
         </span>
-        Assess / Portal
+        AStarCoders
       </div>
-      <p className="nav-label">TEACHER WORKSPACE</p>
       <nav className="sidebar-nav-panel">
         {items.map(([path, label, Icon]) => (
           <NavLink key={path} to={"/teacher/" + path}>
             <Icon size={19} />
             {label}
-            {path === "monitor" && <span className="dot" />}
           </NavLink>
         ))}
       </nav>
       <div className="sidebar-footer">
-        <p>Built for better assessments.</p>
         <button className="sidebar-logout"
           onClick={() => {
             logout();

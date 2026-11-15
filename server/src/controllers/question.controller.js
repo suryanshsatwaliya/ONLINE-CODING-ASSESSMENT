@@ -6,6 +6,11 @@ export async function importProblem(req, res) {
   res.json(await importLeetcodeProblem(req.body.reference));
 }
 export async function list(req, res) {
+  if (req.query.summary === "true") {
+    return res.json(await Question.find({ createdBy: req.user.id })
+      .select("title question description type marks tags createdAt")
+      .sort({ createdAt: -1 }).limit(2000).lean());
+  }
   res.json(
     await Question.find({ createdBy: req.user.id })
       .sort({ createdAt: -1 })

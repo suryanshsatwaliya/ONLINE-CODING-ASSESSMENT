@@ -192,7 +192,6 @@ export default function LiveMonitor() {
     <>
       <div className="page-title">
         <div>
-          <span className="eyebrow">REAL-TIME OVERSIGHT</span>
           <h1>Live monitor</h1>
           <p>Observable events are signals, not proof of misconduct.</p>
         </div>

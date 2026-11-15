@@ -13,5 +13,8 @@ export default model(
     status: String,
     gradedAt: Date,
   },
-  [[{ attempt: 1 }, { unique: true }]],
+  [
+    [{ attempt: 1 }, { unique: true }],
+    [{ assessment: 1, gradedAt: -1 }],
+  ],
 );

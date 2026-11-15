@@ -5,7 +5,6 @@ export default function Settings() {
     <>
       <div className="page-title">
         <div>
-          <span className="eyebrow">WORKSPACE CONFIGURATION</span>
           <h1>Settings</h1>
         </div>
       </div>

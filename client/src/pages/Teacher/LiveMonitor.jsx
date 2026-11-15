@@ -10,7 +10,7 @@ import ViolationLog from "../../components/teacher/ViolationLog";
 import Modal from "../../components/common/Modal";
 import AssessmentPicker from "../../components/teacher/AssessmentPicker";
 import { cacheAssessmentCode, readCachedAssessmentCode } from "../../utils/assessmentAccessCode";
-import Loader from "../../components/common/Loader";
+import TeacherPageSkeleton from "../../components/common/TeacherPageSkeleton";
 export default function LiveMonitor() {
   const [assessments, A] = useState([]),
     [id, I] = useState(""),
@@ -26,6 +26,7 @@ export default function LiveMonitor() {
     [monitorNow, setMonitorNow] = useState(Date.now()),
     [refreshing, setRefreshing] = useState(false),
     [initialLoading, setInitialLoading] = useState(true),
+    [monitorLoading, setMonitorLoading] = useState(false),
     [busy, setBusy] = useState(false);
   const selectedAssessment = assessments.find((assessment) => assessment._id === id);
   const isLive = selectedAssessment?.status === "LIVE";
@@ -79,7 +80,8 @@ export default function LiveMonitor() {
       const t = setInterval(load, 10000);
       return () => clearInterval(t);
     }
-    load().finally(() => setInitialLoading(false));
+    setMonitorLoading(true);
+    load().finally(() => { setMonitorLoading(false); setInitialLoading(false); });
     const t = setInterval(load, 10000);
     return () => clearInterval(t);
   }, [load]);
@@ -233,7 +235,7 @@ export default function LiveMonitor() {
       <div className="monitor-assessment-picker">
         <AssessmentPicker assessments={assessments} value={id} onChange={I} ariaLabel="Select assessment to monitor" placeholder="Choose an assessment…" />
       </div>
-      {initialLoading ? <Loader message="Loading live assessments…" /> : !selectedAssessment ? (
+      {initialLoading || monitorLoading ? <TeacherPageSkeleton type="monitor" label={monitorLoading ? "Loading selected assessment monitoring data" : "Loading live assessments"} /> : !selectedAssessment ? (
         <div className="submission-empty-state monitor-empty-state">
           <span><Radio size={24} /></span>
           <h2>Select an assessment</h2>

@@ -6,6 +6,7 @@ import Modal from "../../components/common/Modal";
 import Button from "../../components/common/Button";
 import Badge from "../../components/common/Badge";
 import AssessmentPicker from "../../components/teacher/AssessmentPicker";
+import TeacherPageSkeleton from "../../components/common/TeacherPageSkeleton";
 
 function attemptStatus(attempt) {
   if (!attempt) return "Not started";
@@ -235,10 +236,10 @@ export default function Submissions() {
           </div>
 
           <section className={`submission-metrics${showCodingMarks ? " has-coding" : " no-coding"}`} aria-label="Assessment summary">
-            <article><span className="submission-metric-icon"><Users size={17} /></span><div><small>Students</small><strong>{students.length}</strong></div></article>
-            <article><span className="submission-metric-icon is-green"><FileCheck2 size={17} /></span><div><small>Submitted</small><strong>{submittedCount} <em>of {students.length}</em></strong></div></article>
-            <article><span className="submission-metric-icon"><ChartNoAxesCombined size={17} /></span><div><small>Average marks</small><strong>{average}</strong></div></article>
-            {showCodingMarks && <article><span className="submission-metric-icon is-amber"><Clock3 size={17} /></span><div><small>Code jobs pending</small><strong>{pendingJobs}</strong></div></article>}
+            <article><span className="submission-metric-icon"><Users size={17} /></span><div><small>Students</small><strong>{loading ? <span className="metric-skeleton" /> : students.length}</strong></div></article>
+            <article><span className="submission-metric-icon is-green"><FileCheck2 size={17} /></span><div><small>Submitted</small><strong>{loading ? <span className="metric-skeleton" /> : <>{submittedCount} <em>of {students.length}</em></>}</strong></div></article>
+            <article><span className="submission-metric-icon"><ChartNoAxesCombined size={17} /></span><div><small>Average marks</small><strong>{loading ? <span className="metric-skeleton" /> : average}</strong></div></article>
+            {showCodingMarks && <article><span className="submission-metric-icon is-amber"><Clock3 size={17} /></span><div><small>Code jobs pending</small><strong>{loading ? <span className="metric-skeleton" /> : pendingJobs}</strong></div></article>}
           </section>
 
           <section className="submission-results-panel">
@@ -260,7 +261,7 @@ export default function Submissions() {
               </div>
             </div>
 
-            <div className="submission-results-table-wrap">
+            {loading ? <TeacherPageSkeleton type="submissions" label="Loading student results" /> : <div className="submission-results-table-wrap">
               <table className="submission-results-table">
                 <thead><tr>
                   <th>Student</th><th>Submission</th>
@@ -300,8 +301,8 @@ export default function Submissions() {
                   })}
                 </tbody>
               </table>
-              {!filteredStudents.length && <div className="empty">{loading ? "Loading assessment data…" : students.length ? "No students match these filters." : "No students are assigned to this assessment."}</div>}
-            </div>
+              {!filteredStudents.length && <div className="empty">{students.length ? "No students match these filters." : "No students are assigned to this assessment."}</div>}
+            </div>}
           </section>
         </>
       )}

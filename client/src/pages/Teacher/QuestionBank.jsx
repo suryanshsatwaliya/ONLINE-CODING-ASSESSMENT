@@ -8,7 +8,7 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 import CreateQuestionMenu from "../../components/teacher/CreateQuestionMenu";
 import Badge from "../../components/common/Badge";
 import QuestionBuilder from "../../components/teacher/QuestionBuilder";
-import Loader from "../../components/common/Loader";
+import TeacherPageSkeleton from "../../components/common/TeacherPageSkeleton";
 
 function setDescription(set) {
   const description = set.description?.trim();
@@ -86,9 +86,9 @@ export default function QuestionBank() {
           <option value="CODING">Coding</option>
         </select>
       </div>
-      {loading && <Loader message="Loading your question bank…" />}
+      {loading && <TeacherPageSkeleton type="question-bank" label="Loading question bank cards" />}
       {loadError && <div className="notice error" role="alert">{loadError} <button onClick={load}>Retry</button></div>}
-      <div className={`grid question-bank-grid${view === "list" ? " is-list" : ""}`}>
+      {!loading && <><div className={`grid question-bank-grid${view === "list" ? " is-list" : ""}`}>
         {sets.filter((set) => (!type || set.type === type) && (set.title + " " + set.description).toLowerCase().includes(search.toLowerCase())).map((set) => (
           <article className={`card bank-set-card ${set.type === "QUIZ" ? "is-quiz" : "is-coding"}`} key={set._id}>
             <div className="bank-card-heading">
@@ -142,6 +142,7 @@ export default function QuestionBank() {
             </div>
           ))}
       </div>
+      </>}
       {!loading && !loadError && !rows.length && !sets.length && (
         <div className="empty card">
           Choose Create Question → Quiz (MCQ) or Coding to build your first reusable set.

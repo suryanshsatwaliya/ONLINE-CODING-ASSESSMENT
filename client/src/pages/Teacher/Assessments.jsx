@@ -6,6 +6,7 @@ import { errorMessage } from "../../services/api";
 import AssessmentCard from "../../components/teacher/AssessmentCard";
 import ReuseAssessmentModal from "../../components/teacher/ReuseAssessmentModal";
 import { useAssessmentUpdates } from "../../hooks/useAssessmentUpdates";
+import TeacherPageSkeleton from "../../components/common/TeacherPageSkeleton";
 
 export default function Assessments() {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ export default function Assessments() {
       <div className="ah-metrics" aria-label="Assessment overview">
         {[["ALL", "Total assessments", ClipboardList, "Everything in one place"], ["LIVE", "Live now", Radio, "Currently accepting attempts"], ["SCHEDULED", "Scheduled", CalendarDays, "Prepared for a later start"], ["DRAFT", "Drafts", FileEdit, "Ready for your next edit"], ["ENDED", "Completed", CheckCircle2, "Finished assessments"]].map(([key, label, Icon, hint]) => (
           <button type="button" className={`ah-metric metric-${key.toLowerCase()} ${status === key ? "active" : ""}`} key={key} onClick={() => setStatus(key)} aria-pressed={status === key}>
-            <span className="ah-metric-top"><span>{label}</span><Icon size={18} /></span><strong>{loading ? "—" : count(key)}</strong><small>{hint}</small>
+            <span className="ah-metric-top"><span>{label}</span><Icon size={18} /></span><strong>{loading ? <span className="metric-skeleton" /> : count(key)}</strong><small>{hint}</small>
           </button>
         ))}
       </div>
@@ -46,7 +47,7 @@ export default function Assessments() {
           <select aria-label="Sort assessments" value={sort} onChange={(e) => setSort(e.target.value)}><option value="recent">Newest first</option><option value="title">Title A–Z</option><option value="duration">Shortest duration</option></select>
           <Link className="ah-question-bank-link" to="/teacher/questions">Question bank <ArrowUpRight size={16} /></Link>
         </div>
-        {error ? <div className="ah-empty" role="alert"><p>{error}</p><button className="btn secondary" onClick={load}>Try again</button></div> : loading ? <div className="ah-empty" role="status">Loading your assessments…</div> : visible.length ? <>
+        {error ? <div className="ah-empty" role="alert"><p>{error}</p><button className="btn secondary" onClick={load}>Try again</button></div> : loading ? <TeacherPageSkeleton type="assessments" label="Loading assessment cards" /> : visible.length ? <>
           <div className="ah-cards">{visible.map((a) => <AssessmentCard key={a._id} assessment={a} onReuse={setReuseId} onDeleted={(id) => setRows((previous) => previous.filter((item) => item._id !== id))} />)}</div>
           <p className="ah-result-count">Showing {visible.length} of {rows.length} assessments</p>
         </> : <div className="ah-empty"><span className="ah-empty-icon"><ClipboardList size={30} /></span><h3>{rows.length ? "No matching assessments" : "Your next assessment starts here"}</h3><p>{rows.length ? "Try another search or clear your filters." : "Choose saved questions and create your first assessment in a few simple steps."}</p>

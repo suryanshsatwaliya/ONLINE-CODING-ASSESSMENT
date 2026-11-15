@@ -3,7 +3,7 @@ import { api, errorMessage } from "../../services/api";
 import { useToast } from "../../components/common/Toast";
 import ResultTable from "../../components/teacher/ResultTable";
 import Modal from "../../components/common/Modal";
-import Loader from "../../components/common/Loader";
+import TeacherPageSkeleton from "../../components/common/TeacherPageSkeleton";
 export default function Results() {
   const [assessments, A] = useState([]),
     [id, I] = useState(""),
@@ -88,7 +88,7 @@ export default function Results() {
         </div>
       </div>
       <div className="card">
-        {loading ? <Loader message="Loading assessment results…" /> : <><ResultTable
+        {loading ? <TeacherPageSkeleton type="submissions" label="Loading assessment results" /> : <><ResultTable
           rows={rows
             .filter(
               (r) =>

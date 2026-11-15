@@ -10,6 +10,7 @@ import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 
 let turnstileScriptPromise;
+const configuredTurnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
 function loadTurnstile() {
   if (window.turnstile) return Promise.resolve();
   if (!turnstileScriptPromise) {
@@ -19,7 +20,10 @@ function loadTurnstile() {
       script.async = true;
       script.defer = true;
       script.onload = resolve;
-      script.onerror = () => reject(new Error("Could not load human verification."));
+      script.onerror = () => {
+        turnstileScriptPromise = null;
+        reject(new Error("Could not load human verification."));
+      };
       document.head.appendChild(script);
     });
   }
@@ -80,7 +84,11 @@ export default function TeacherLogin() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [captchaConfig, setCaptchaConfig] = useState(null);
+  // The public site key is bundled with the client so the widget can render
+  // without waiting for a potentially cold API instance to return its config.
+  const [captchaConfig, setCaptchaConfig] = useState(() => configuredTurnstileSiteKey
+    ? { enabled: true, siteKey: configuredTurnstileSiteKey }
+    : null);
   const [captchaToken, setCaptchaToken] = useState("");
   const [visibleCodeLetters, setVisibleCodeLetters] = useState(0);
   const resetCaptchaRef = useRef(null);
@@ -93,9 +101,11 @@ export default function TeacherLogin() {
     // Start the Cloudflare download alongside the config request so the two
     // network waits do not block each other.
     loadTurnstile().catch(() => {});
-    authService.teacherCaptchaConfig()
-      .then(({ data }) => { if (active) setCaptchaConfig(data); })
-      .catch(() => { if (active) setCaptchaConfig({ enabled: false, unavailable: true }); });
+    if (!configuredTurnstileSiteKey) {
+      authService.teacherCaptchaConfig()
+        .then(({ data }) => { if (active) setCaptchaConfig(data); })
+        .catch(() => { if (active) setCaptchaConfig({ enabled: false, unavailable: true }); });
+    }
     return () => { active = false; };
   }, []);
 

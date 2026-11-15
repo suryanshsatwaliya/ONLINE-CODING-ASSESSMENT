@@ -5,6 +5,7 @@ import { errorMessage } from "../../services/api";
 import { useFullscreen } from "../../hooks/useFullscreen";
 import Navbar from "../../components/layout/Navbar";
 import { useAuth } from "../../hooks/useAuth";
+import Loader from "../../components/common/Loader";
 const terminationLabels = {
   FULLSCREEN_EXIT: "Fullscreen was exited",
   TAB_HIDDEN: "The assessment tab was hidden or switched away from",
@@ -32,6 +33,7 @@ export default function Result() {
     const t = setInterval(load, 8000);
     return () => clearInterval(t);
   }, [id]);
+  if (!data && !error) return <><Navbar /><main className="student-page narrow"><Loader message="Loading your assessment results…" /></main></>;
   return (
     <>
       <Navbar />

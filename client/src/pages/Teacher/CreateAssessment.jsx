@@ -9,6 +9,7 @@ import Badge from "../../components/common/Badge";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import AssessmentAccess from "../../components/teacher/AssessmentAccess";
 import DeleteAssessmentButton from "../../components/teacher/DeleteAssessmentButton";
+import Loader from "../../components/common/Loader";
 import ReuseAssessmentModal from "../../components/teacher/ReuseAssessmentModal";
 import { useAssessmentUpdates } from "../../hooks/useAssessmentUpdates";
 import AssessmentQuestionPicker, { assessmentForm, availableSets, questionCount as countQuestions } from "../../components/teacher/AssessmentQuestionPicker";
@@ -134,7 +135,7 @@ export default function CreateAssessment() {
       toast(errorMessage(e));
     }
   }
-  if (loading) return <p role="status">Loading assessment options…</p>;
+  if (loading) return <Loader message="Loading assessment options…" />;
   if (loadError) return <p role="alert" className="error notice">{loadError}</p>;
   return (
     <>

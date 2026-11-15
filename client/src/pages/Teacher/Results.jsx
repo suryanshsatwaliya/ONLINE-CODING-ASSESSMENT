@@ -3,6 +3,7 @@ import { api, errorMessage } from "../../services/api";
 import { useToast } from "../../components/common/Toast";
 import ResultTable from "../../components/teacher/ResultTable";
 import Modal from "../../components/common/Modal";
+import Loader from "../../components/common/Loader";
 export default function Results() {
   const [assessments, A] = useState([]),
     [id, I] = useState(""),
@@ -10,7 +11,8 @@ export default function Results() {
     [search, S] = useState(""),
     [status, St] = useState(""),
     [sort, Sort] = useState("score"),
-    [detail, D] = useState(null);
+    [detail, D] = useState(null),
+    [loading, setLoading] = useState(true);
   const toast = useToast();
   useEffect(() => {
     api
@@ -19,14 +21,18 @@ export default function Results() {
         A(r.data);
         I(r.data[0]?._id || "");
       })
-      .catch((e) => toast(errorMessage(e)));
+      .catch((e) => toast(errorMessage(e)))
+      .finally(() => setLoading(false));
   }, []);
   useEffect(() => {
-    if (id)
+    if (id) {
+      setLoading(true);
       api
         .get("/results/" + id)
         .then((r) => R(r.data))
-        .catch((e) => toast(errorMessage(e)));
+        .catch((e) => toast(errorMessage(e)))
+        .finally(() => setLoading(false));
+    }
   }, [id]);
   return (
     <>
@@ -82,7 +88,7 @@ export default function Results() {
         </div>
       </div>
       <div className="card">
-        <ResultTable
+        {loading ? <Loader message="Loading assessment results…" /> : <><ResultTable
           rows={rows
             .filter(
               (r) =>
@@ -109,6 +115,7 @@ export default function Results() {
             Results will appear after students submit.
           </div>
         )}
+        </>}
       </div>
       {detail && (
         <Modal

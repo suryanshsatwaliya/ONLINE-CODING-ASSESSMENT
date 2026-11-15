@@ -8,6 +8,7 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 import CreateQuestionMenu from "../../components/teacher/CreateQuestionMenu";
 import Badge from "../../components/common/Badge";
 import QuestionBuilder from "../../components/teacher/QuestionBuilder";
+import Loader from "../../components/common/Loader";
 
 function setDescription(set) {
   const description = set.description?.trim();
@@ -85,7 +86,7 @@ export default function QuestionBank() {
           <option value="CODING">Coding</option>
         </select>
       </div>
-      {loading && <p role="status">Loading your question bank…</p>}
+      {loading && <Loader message="Loading your question bank…" />}
       {loadError && <div className="notice error" role="alert">{loadError} <button onClick={load}>Retry</button></div>}
       <div className={`grid question-bank-grid${view === "list" ? " is-list" : ""}`}>
         {sets.filter((set) => (!type || set.type === type) && (set.title + " " + set.description).toLowerCase().includes(search.toLowerCase())).map((set) => (

@@ -10,6 +10,7 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 import StudentTable from "../../components/teacher/StudentTable";
 import BulkStudentModal from "../../components/teacher/BulkStudentModal";
 import { makeStudentWorkbook } from "../../utils/studentWorkbook";
+import Loader from "../../components/common/Loader";
 export default function Students() {
   const [rows, R] = useState([]),
     [form, F] = useState(null),
@@ -18,13 +19,15 @@ export default function Students() {
     [course, C] = useState(""),
     [section, Sec] = useState(""),
     [status, St] = useState(""),
-    [del, D] = useState(null);
+    [del, D] = useState(null),
+    [loading, setLoading] = useState(true);
   const toast = useToast();
-  const load = () =>
-    service
-      .list()
-      .then((r) => R(r.data))
-      .catch((e) => toast(errorMessage(e)));
+  const load = async () => {
+    setLoading(true);
+    try { const r = await service.list(); R(r.data); }
+    catch (e) { toast(errorMessage(e)); }
+    finally { setLoading(false); }
+  };
   useEffect(() => {
     load();
   }, []);
@@ -96,7 +99,7 @@ export default function Students() {
         </select>
       </div>
       <div className="card">
-        {section ? (
+        {loading ? <Loader message="Loading your student list…" /> : section ? (
           <div className="student-results-transition" key={section}>
             <div className="student-section-toolbar"><div><strong>{section}</strong><span>{sectionStudents.length} student{sectionStudents.length === 1 ? "" : "s"}</span></div><Button type="button" variant="secondary" onClick={downloadSectionCsv}><Download size={15} />Download Excel</Button></div>
             <StudentTable

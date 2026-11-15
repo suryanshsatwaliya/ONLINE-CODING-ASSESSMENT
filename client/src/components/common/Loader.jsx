@@ -1,9 +1,9 @@
-export default function Loader() {
+export default function Loader({ message = "Loading your workspace…" }) {
   return (
-    <div aria-busy="true" className="loading">
+    <div aria-busy="true" className="loading" role="status">
       <div className="skeleton" />
       <div className="skeleton" />
-      <p>Loading your workspace…</p>
+      <p>{message}</p>
     </div>
   );
 }

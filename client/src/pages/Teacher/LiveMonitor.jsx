@@ -10,6 +10,7 @@ import ViolationLog from "../../components/teacher/ViolationLog";
 import Modal from "../../components/common/Modal";
 import AssessmentPicker from "../../components/teacher/AssessmentPicker";
 import { cacheAssessmentCode, readCachedAssessmentCode } from "../../utils/assessmentAccessCode";
+import Loader from "../../components/common/Loader";
 export default function LiveMonitor() {
   const [assessments, A] = useState([]),
     [id, I] = useState(""),
@@ -24,6 +25,7 @@ export default function LiveMonitor() {
     [selectedStudents, setSelectedStudents] = useState(() => new Set()),
     [monitorNow, setMonitorNow] = useState(Date.now()),
     [refreshing, setRefreshing] = useState(false),
+    [initialLoading, setInitialLoading] = useState(true),
     [busy, setBusy] = useState(false);
   const selectedAssessment = assessments.find((assessment) => assessment._id === id);
   const isLive = selectedAssessment?.status === "LIVE";
@@ -73,11 +75,11 @@ export default function LiveMonitor() {
   useEffect(() => {
     if (!id) {
       R([]);
-      load();
+      load().finally(() => setInitialLoading(false));
       const t = setInterval(load, 10000);
       return () => clearInterval(t);
     }
-    load();
+    load().finally(() => setInitialLoading(false));
     const t = setInterval(load, 10000);
     return () => clearInterval(t);
   }, [load]);
@@ -231,7 +233,7 @@ export default function LiveMonitor() {
       <div className="monitor-assessment-picker">
         <AssessmentPicker assessments={assessments} value={id} onChange={I} ariaLabel="Select assessment to monitor" placeholder="Choose an assessment…" />
       </div>
-      {!selectedAssessment ? (
+      {initialLoading ? <Loader message="Loading live assessments…" /> : !selectedAssessment ? (
         <div className="submission-empty-state monitor-empty-state">
           <span><Radio size={24} /></span>
           <h2>Select an assessment</h2>

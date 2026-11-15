@@ -9,6 +9,7 @@ import Badge from "../../components/common/Badge";
 import Modal from "../../components/common/Modal";
 import { useAuth } from "../../hooks/useAuth";
 import { useTimer } from "../../hooks/useTimer";
+import Loader from "../../components/common/Loader";
 export default function AssessmentLobby() {
   const { logout, user, updateUser } = useAuth();
   const { id } = useParams(),
@@ -99,6 +100,7 @@ export default function AssessmentLobby() {
       B(false);
     }
   }
+  if (!a && !error) return <><Navbar /><main className="student-page narrow"><Loader message="Loading your assessment lobby…" /></main></>;
   return (
     <>
       <Navbar />

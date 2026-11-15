@@ -9,6 +9,7 @@ import { blankQuestion } from "../../components/teacher/QuestionBuilder";
 import QuizQuestionEditor from "../../components/teacher/QuizQuestionEditor";
 import CodingProblemBuilder from "../../components/teacher/CodingProblemBuilder";
 import LeetcodeImport from "../../components/teacher/LeetcodeImport";
+import Loader from "../../components/common/Loader";
 
 const draft = (type) => ({ ...structuredClone(blankQuestion), type: type === "CODING" ? "CODING" : "SINGLE", draftId: crypto.randomUUID() });
 export default function QuestionSetEditor() {
@@ -61,7 +62,7 @@ export default function QuestionSetEditor() {
       setError((issue?.path?.[0] === "questions" ? `Question ${issue.path[1] + 1}: ` : "") + errorMessage(e));
     } finally { pending.current = false; setSaving(false); }
   }
-  if (loading) return <p role="status">Loading question set…</p>;
+  if (loading) return <Loader message="Loading your question set…" />;
   if (id && !form._id) return <div className="card"><p role="alert">{error || "Question set unavailable"}</p><Link to="/teacher/questions">Back to Question Bank</Link></div>;
   return (
     <div className="question-set-studio">

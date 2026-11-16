@@ -568,8 +568,9 @@ html[data-theme="dark"] .entry-help { border-color: var(--line); }
   .landing-footer-developer { order: 3; }
 
   .teacher-login-page { min-height: auto; padding: 28px 20px 40px; }
-  .teacher-login-layout { max-width: 540px; grid-template-columns: 1fr; gap: 27px; }
-  .teacher-login-story { max-width: none; }
+  .teacher-login-layout { width: 100%; min-width: 0; max-width: 540px; grid-template-columns: minmax(0, 1fr); gap: 27px; }
+  .teacher-login-story { min-width: 0; max-width: none; }
+  .teacher-login-code-stage, .teacher-login-card { min-width: 0; }
   .teacher-login-story h1 { max-width: 520px; font-size: clamp(34px, 8vw, 46px); }
   .teacher-code-card { max-width: 100%; }
   .teacher-login-note { display: none; }
@@ -599,9 +600,17 @@ html[data-theme="dark"] .entry-help { border-color: var(--line); }
   .landing-float-progress { right: -3px; top: 0; }
   .landing-float-score { left: -3px; bottom: 0; }
   .teacher-login-page { padding-inline: 16px; }
+  .teacher-login-code-stage { padding-inline: 0; }
+  .teacher-login-code-body { padding-inline: 10px; font-size: 10px; }
+  .teacher-login-floating-bottom { left: 0; }
   .teacher-login-card { padding: 24px 20px; }
   .student-entry { padding-inline: 16px; }
   .entry-form { padding: 24px 20px; }
+}
+@media (max-width: 340px) {
+  .teacher-login-page { padding-inline: 12px; }
+  .teacher-login-points { grid-template-columns: 1fr; }
+  .teacher-login-card { padding: 21px 16px; }
 }
 
 /* Landing page: assessment safeguards and a more substantial violet footer. */

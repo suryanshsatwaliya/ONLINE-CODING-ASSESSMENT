@@ -28,6 +28,7 @@ export default function StudentLogin() {
   const { login } = useAuth(), nav = useNavigate();
   const chromeAllowed = isGoogleChrome();
   useEffect(() => {
+    if (!chromeAllowed) return;
     let timer;
     let letter = 0;
     const typeNext = () => {
@@ -42,7 +43,7 @@ export default function StudentLogin() {
     };
     timer = window.setTimeout(typeNext, 350);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [chromeAllowed]);
   async function submit(event) {
     event.preventDefault();
     if (pending.current) return;
@@ -62,6 +63,17 @@ export default function StudentLogin() {
     } catch (e) { setError(errorMessage(e)); }
     finally { pending.current = false; setBusy(false); }
   }
+  if (!chromeAllowed) return <>
+    <Navbar />
+    <main className="student-device-block">
+      <section className="student-device-notice" role="status">
+        <ShieldCheck size={24} />
+        <h1>Desktop required</h1>
+        <p>{chromeOnlyMessage}</p>
+        <Link to="/">Return to portals</Link>
+      </section>
+    </main>
+  </>;
   return <>
     <Navbar />
     <main className="student-entry">
@@ -94,7 +106,6 @@ export default function StudentLogin() {
             <Input label="Student UID" placeholder="Enter your student UID" autoComplete="username" autoCapitalize="characters" spellCheck={false} maxLength={40} required value={uid} onChange={(e) => setUid(e.target.value.toUpperCase())} />
             <Input label="Assessment code" className="entry-code-input" placeholder="A7K2M9" autoComplete="off" autoCapitalize="characters" spellCheck={false} minLength={6} maxLength={6} pattern="[A-Z0-9]{6}" title="Enter 6 uppercase letters and numbers." aria-describedby="entry-code-hint" required value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))} />
             <p id="entry-code-hint" className="entry-code-hint">6 characters · uppercase letters and numbers</p>
-            {!chromeAllowed && <p className="notice error" role="alert">{chromeOnlyMessage}</p>}
             {error && <p className="notice error" role="alert">{error}</p>}
             <Button type="submit" disabled={busy || !chromeAllowed}>{busy ? "Checking your details…" : "Join assessment"}<ArrowRight size={18} /></Button>
           </fieldset>

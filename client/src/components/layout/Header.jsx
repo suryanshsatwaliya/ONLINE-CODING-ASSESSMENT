@@ -1,8 +1,8 @@
 import { useAuth } from "../../hooks/useAuth";
 import ThemeToggle from "../common/ThemeToggle";
-import { PanelsTopLeft } from "lucide-react";
+import { Menu, PanelsTopLeft } from "lucide-react";
 import { useLocation } from "react-router-dom";
-export default function Header() {
+export default function Header({ isNavOpen, onOpenMenu }) {
   const { user } = useAuth();
   const { pathname } = useLocation();
   const section = pathname.split("/").filter(Boolean)[1] || "dashboard";
@@ -20,6 +20,9 @@ export default function Header() {
   }
   return (
     <header className="workspace-header workspace-header-redesign">
+      <button className="workspace-nav-toggle" type="button" aria-label="Open navigation" aria-expanded={isNavOpen} aria-controls="teacher-navigation" onClick={onOpenMenu}>
+        <Menu size={20} />
+      </button>
       <div className="workspace-context">
         <span className="workspace-context-icon"><PanelsTopLeft size={17} /></span>
         <span className="workspace-context-label">

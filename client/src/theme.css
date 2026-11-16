@@ -65,6 +65,13 @@ body::before {
 .theme-toggle[aria-checked="true"] .theme-track > span { transform:translateX(12px); }
 .navbar-actions { display:flex; align-items:center; gap:22px; }
 @media(max-width:680px) { .navbar-actions > .eyebrow { display:none; } .navbar { padding-inline:20px; } .workspace-header { gap:12px; height:auto; min-height:84px; padding-block:12px; flex-wrap:wrap; } .workspace-header > .row { gap:10px; flex-wrap:wrap; } }
+@media(max-width:750px) {
+  html[data-theme="dark"] .sidebar.is-open { background:var(--surface); }
+  html[data-theme="dark"] .sidebar-menu-toggle { border-color:var(--line); background:var(--surface); color:var(--ink); }
+  html[data-theme="dark"] .sidebar.is-open nav.sidebar-nav-panel { border-color:#3d3854; background:linear-gradient(125deg,#222136,#1a2132 43%,#28233d 73%,#1a2132); }
+  html[data-theme="dark"] .sidebar.is-open nav.sidebar-nav-panel a:hover { background:#28253c; color:#c2b5ff; }
+  html[data-theme="dark"] .sidebar.is-open nav.sidebar-nav-panel a.active { border-color:#514873; background:#30294d; color:#c2b5ff; }
+}
 /* Common surfaces and controls, used by both teacher and student pages. */
 html[data-theme="dark"] body { background:var(--page); color:var(--ink); }
 html[data-theme="dark"] :is(.card,.sidebar,.modal,.portal-card,.set-save-bar,.assessment-menu-options,.assessment-question-editor,.entry-form,.assessment-access,.ah-metric,.ah-search,.ah-assessment-card,.as-steps,.as-panel,.as-summary) { background:var(--surface); border-color:var(--line); }

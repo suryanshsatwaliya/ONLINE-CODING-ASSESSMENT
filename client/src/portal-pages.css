@@ -169,8 +169,10 @@
 }
 .landing-primary-link { padding: 0 18px; background: #675be0; color: #fff; box-shadow: 0 9px 24px #4e43bd42; }
 .landing-primary-link:hover { transform: translateY(-2px); background: #7569ea; box-shadow: 0 13px 30px #4e43bd55; }
-.landing-secondary-link { padding: 0 12px; color: #e4e6f5; }
-.landing-secondary-link:hover { transform: translateY(-2px); color: #bdb5ff; }
+.landing-secondary-link { padding: 0 18px; border: 1px solid #d9deea; background: #fff; color: #263047; box-shadow: 0 6px 18px #202b4a0a; }
+.landing-secondary-link:hover { transform: translateY(-2px); border-color: #bcb6ed; background: #faf9ff; color: #5146bf; box-shadow: 0 10px 24px #202b4a12; }
+html[data-theme="dark"] .landing-secondary-link { border-color: #3a4055; background: #202438; color: #e4e6f5; box-shadow: none; }
+html[data-theme="dark"] .landing-secondary-link:hover { border-color: #7468dc; background: #292b46; color: #c3baff; }
 .landing-proof-row { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 32px; color: #abb5c9; font-size: 11px; }
 .landing-proof-row span { display: inline-flex; align-items: center; gap: 7px; }
 .landing-proof-row svg { color: #79dfba; }
@@ -550,10 +552,11 @@ html[data-theme="dark"] .entry-help { border-color: var(--line); }
   .landing-redesign > .navbar { height: 72px; padding-inline: 18px; }
   .landing-nav-actions { gap: 8px; }
   .landing-signin-trigger { min-height: 37px; padding-inline: 11px; }
-  .landing-hero { padding: 55px 22px 64px; }
-  .landing-hero-grid { grid-template-columns: 1fr; gap: 23px; }
+  .landing-hero { padding: 28px 22px 64px; }
+  .landing-hero-grid { grid-template-columns: 1fr; gap: 90px; }
   .landing-copy { max-width: 600px; }
   .landing-copy h1 { max-width: 560px; font-size: clamp(42px, 11vw, 62px); }
+  .landing-hero-actions { margin-top: 18px; }
   .landing-visual { min-height: 330px; margin: 2px auto 0; width: min(100%, 520px); }
   .landing-code-window { width: min(90%, 440px); }
   .landing-orbit-one { width: 300px; height: 300px; }
@@ -636,7 +639,8 @@ html[data-theme="dark"] .entry-help { border-color: var(--line); }
 .landing-footer-about { max-width: 370px; }
 .landing-footer-brand { color: #fff; font-size: 16px; }
 .landing-footer-brand i { color: #aaa1ff; font-style: normal; }
-.landing-footer-brand .brand-icon { width: 34px; height: 34px; border: 1px solid #ffffff20; border-radius: 10px; background: #6a5be4; color: #fff; }
+.landing-footer-brand .brand-icon { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; box-sizing: border-box; padding: 0; border: 1px solid #ffffff20; border-radius: 10px; background: #6a5be4; color: #fff; }
+.landing-footer-brand .brand-icon svg { display: block; margin: 0; }
 .landing-footer-about p { max-width: 340px; margin: 14px 0 0; color: #bbb9d2; font-size: 12px; line-height: 1.75; }
 .landing-footer-links { display: grid; align-content: start; justify-items: start; gap: 10px; }
 .landing-footer-links > strong, .landing-developer-label { margin-bottom: 2px; color: #aaa4d1; font-size: 9px; font-weight: 800; letter-spacing: .15em; }

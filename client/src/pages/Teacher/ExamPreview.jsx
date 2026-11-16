@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import ExamWorkspace from "../../components/assessment/ExamWorkspace";
 import Modal from "../../components/common/Modal";
 import Button from "../../components/common/Button";
+import Navbar from "../../components/layout/Navbar";
+import { ShieldCheck } from "lucide-react";
+import { chromeOnlyMessage, isMobilePhone } from "../../utils/browserPolicy";
 
 const assessment = {
   title: "Data Structures & Algorithms", type: "MIXED", duration: 30,
@@ -19,10 +22,22 @@ const assessment = {
 export default function ExamPreview() {
   const [answers, setAnswers] = useState({ "preview-1": { value: [1], marked: false } });
   const [current, setCurrent] = useState(1), [review, setReview] = useState(false);
+  const mobileViewport = isMobilePhone() || (typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches);
   function change(value, marked) {
     const id = assessment.questions[current]._id;
     setAnswers((old) => ({ ...old, [id]: { value, marked: marked ?? old[id]?.marked ?? false } }));
   }
+  if (mobileViewport) return <>
+    <Navbar />
+    <main className="student-device-block">
+      <section className="student-device-notice" role="status">
+        <ShieldCheck size={24} />
+        <h1>Desktop required</h1>
+        <p>{chromeOnlyMessage}</p>
+        <Link to="/teacher/dashboard">Back to dashboard</Link>
+      </section>
+    </main>
+  </>;
   return <div className="exam-preview-page">
     <div className="exam-preview-banner"><span><strong>INTERFACE PREVIEW</strong> · Try answers and question navigation. No real attempt is created.</span><Link to="/teacher/dashboard">Back to dashboard →</Link></div>
     <ExamWorkspace assessment={assessment} attempt={{ warningCount: 0, optionOrders: {} }} name="Alex Morgan" seconds={1425} connected answers={answers} current={current} onNavigate={setCurrent} change={change} status="Saved" flush={async () => {}} onSubmit={() => setReview(true)} preview>

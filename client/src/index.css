@@ -872,7 +872,7 @@ summary {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
 }
-@media (prefers-reduced-motion: reduce) {
+@media (max-width: 750px) and (prefers-reduced-motion: reduce) {
   .student-results-transition { animation: none; }
 }
 .table-wrap {
@@ -2051,9 +2051,9 @@ html[data-theme="dark"] .monitor-session-control.is-end.btn:hover:not(:disabled)
     box-shadow: 12px 0 40px #17213a24;
     transform: translateX(-105%);
     visibility: hidden;
-    transition: transform .24s cubic-bezier(.2,.75,.25,1), visibility .24s;
+    transition: transform .32s cubic-bezier(.22,1,.36,1), visibility 0s linear .32s;
   }
-  .sidebar.is-open { transform: translateX(0); visibility: visible; }
+  .sidebar.is-open { transform: translateX(0); visibility: visible; transition-delay: 0s; }
   .sidebar .brand {
     width: 100%;
     align-items: center;
@@ -2090,6 +2090,7 @@ html[data-theme="dark"] .monitor-session-control.is-end.btn:hover:not(:disabled)
     display: block;
     border: 0;
     background: #11182766;
+    animation: sidebar-overlay-in .32s ease both;
     cursor: default;
   }
   .sidebar.is-open nav.sidebar-nav-panel {
@@ -2120,6 +2121,7 @@ html[data-theme="dark"] .monitor-session-control.is-end.btn:hover:not(:disabled)
     background: #efedff;
     color: #6259d6;
   }
+  .sidebar-nav-loading { margin-left: auto; animation: sidebar-nav-spin .75s linear infinite; }
   .sidebar.is-open .sidebar-footer {
     display: block;
     margin-top: auto;
@@ -2226,6 +2228,13 @@ html[data-theme="dark"] .monitor-session-control.is-end.btn:hover:not(:disabled)
   .result-card h1 {
     font-size: 27px;
   }
+}
+@keyframes sidebar-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sidebar-nav-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar { transition: none !important; }
+  .sidebar-backdrop { animation: none !important; }
+  .sidebar-nav-loading { animation-duration: 1.5s; }
 }
 /* Keep the scheduled countdown prominent before students enter the exam. */
 .lobby-countdown { display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 4px solid #6056df; }

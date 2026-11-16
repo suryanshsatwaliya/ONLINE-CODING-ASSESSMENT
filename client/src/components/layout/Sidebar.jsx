@@ -11,8 +11,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { X } from "lucide-react";
-import { useEffect } from "react";
+import { LoaderCircle, X } from "lucide-react";
+import { useEffect, useState } from "react";
 const items = [
   ["dashboard", "Dashboard", LayoutDashboard],
   ["students", "Students", Users],
@@ -23,6 +23,7 @@ const items = [
   ["settings", "Settings", Settings],
 ];
 export default function Sidebar({ isOpen, onClose, mobileOnly = false }) {
+  const [pendingPath, setPendingPath] = useState("");
   const { logout } = useAuth(),
     nav = useNavigate(),
     location = useLocation();
@@ -39,6 +40,19 @@ export default function Sidebar({ isOpen, onClose, mobileOnly = false }) {
       document.body.style.overflow = previousOverflow;
     };
   }, [isOpen, onClose]);
+  useEffect(() => {
+    if (!pendingPath) return;
+    const target = "/teacher/" + pendingPath;
+    const isTargetPage = location.pathname === target || location.pathname.startsWith(target + "/") || (pendingPath === "submissions" && location.pathname === "/teacher/results");
+    if (isTargetPage) {
+      setPendingPath("");
+      onClose();
+    }
+  }, [location.pathname, onClose, pendingPath]);
+  function markMobileNavigation(path) {
+    if (!window.matchMedia("(max-width: 750px)").matches) return;
+    setPendingPath(path);
+  }
   return (
     <>
       {isOpen && <button className="sidebar-backdrop" type="button" aria-label="Close navigation" onClick={onClose} />}
@@ -62,11 +76,12 @@ export default function Sidebar({ isOpen, onClose, mobileOnly = false }) {
             <NavLink
               key={path}
               to={"/teacher/" + path}
-              onClick={onClose}
+              onClick={() => markMobileNavigation(path)}
               end={path === "dashboard"}
               className={({ isActive }) => isActive || (path === "submissions" && location.pathname === "/teacher/results") ? "active" : undefined}
+              aria-busy={pendingPath === path || undefined}
             >
-              <Icon size={19} />{label}
+              <Icon size={19} />{label}{pendingPath === path && <LoaderCircle className="sidebar-nav-loading" size={17} aria-hidden="true" />}
             </NavLink>
           ))}
         </nav>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle2, GraduationCap, ShieldCheck } from "lucide-react";
 import { authService } from "../../services/authService";
@@ -15,22 +15,33 @@ function loadTurnstile() {
   if (window.turnstile) return Promise.resolve();
   if (!turnstileScriptPromise) {
     turnstileScriptPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      script.async = true;
-      script.defer = true;
-      script.onload = resolve;
-      script.onerror = () => {
+      let script = document.querySelector("script[data-turnstile-script]");
+      const onLoad = () => resolve();
+      const onError = () => {
+        script?.remove();
         turnstileScriptPromise = null;
         reject(new Error("Could not load human verification."));
       };
-      document.head.appendChild(script);
+
+      if (script?.dataset.turnstileFailed === "true") {
+        script.remove();
+        script = null;
+      }
+      if (!script) {
+        script = document.createElement("script");
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        script.async = true;
+        script.dataset.turnstileScript = "true";
+        document.head.appendChild(script);
+      }
+      script.addEventListener("load", onLoad, { once: true });
+      script.addEventListener("error", onError, { once: true });
     });
   }
   return turnstileScriptPromise;
 }
 
-function TurnstileWidget({ siteKey, theme, onToken, resetRef }) {
+const TurnstileWidget = memo(function TurnstileWidget({ siteKey, theme, onToken, resetRef }) {
   const hostRef = useRef(null);
   const widgetIdRef = useRef(null);
   const [loadError, setLoadError] = useState("");
@@ -70,7 +81,7 @@ function TurnstileWidget({ siteKey, theme, onToken, resetRef }) {
     <div ref={hostRef} className="teacher-captcha-widget" />
     {loadError && <p className="teacher-captcha-error" role="alert">{loadError}</p>}
   </div>;
-}
+});
 
 const teacherCodeLines = [
   [{ text: "function", className: "code-keyword" }, { text: " solveChallenge", className: "code-function" }, { text: "() {" }],

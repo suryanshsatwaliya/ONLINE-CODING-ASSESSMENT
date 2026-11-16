@@ -75,7 +75,7 @@ Open `http://localhost:5173`. The client `.env.example` points to the local API 
 
 **Code execution:** Set `CODE_RUNNER_URL` and the provider credentials in `server/.env` for a trusted Judge0-compatible sandbox. The server does not execute student code itself. Without a configured runner, the code editor remains available but Run Code cannot execute submissions.
 
-**Teacher sign-in verification:** Set `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` in `server/.env` to enable server-side Cloudflare Turnstile verification. Also set the matching public `VITE_TURNSTILE_SITE_KEY` in the client build environment. This lets the browser render Turnstile immediately without waiting for the API to wake up. The site key is public; never expose `TURNSTILE_SECRET_KEY` to the client. Leave the three variables empty to disable Turnstile.
+**Teacher sign-in verification:** Set `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` in `server/.env` to enable server-side Cloudflare Turnstile verification. Also set the matching public `VITE_TURNSTILE_SITE_KEY` in the client build environment. This lets the browser render Turnstile immediately without waiting for the API to wake up; the Cloudflare script begins downloading from the initial HTML response on the teacher sign-in route. The site key is public; never expose `TURNSTILE_SECRET_KEY` to the client. Leave the three variables empty to disable Turnstile.
 
 **AI feedback:** Set `AI_API_URL`, `AI_API_KEY`, and `AI_MODEL` in `server/.env` to enable an OpenAI-compatible chat-completions provider. AI feedback is optional and requires teacher review.
 
@@ -83,7 +83,7 @@ Never put server secrets in client environment variables or commit real credenti
 
 ## Deployment
 
-- **Client:** Deploy `client` to Vercel with the Vite build command `npm run build` and output directory `dist`. Set `VITE_API_URL` to the deployed API URL ending in `/api`, and `VITE_SOCKET_URL` to the API origin. For immediate Turnstile rendering, set `VITE_TURNSTILE_SITE_KEY` to the same public site key configured as `TURNSTILE_SITE_KEY` on the API. `client/vercel.json` provides SPA route rewrites.
+- **Client:** Deploy `client` to Vercel with the Vite build command `npm run build` and output directory `dist`. Set `VITE_API_URL` to the deployed API URL ending in `/api`, and `VITE_SOCKET_URL` to the API origin. For immediate Turnstile rendering, set `VITE_TURNSTILE_SITE_KEY` to the same public site key configured as `TURNSTILE_SITE_KEY` on the API, then redeploy the client. `client/vercel.json` provides SPA route rewrites.
 - **API:** Deploy `server` as a persistent Node web service on Render. The provided `render.yaml` is a starting Blueprint. Configure `MONGODB_URI`, `JWT_SECRET`, and `CLIENT_URL` in the service environment; add optional provider credentials only when needed.
 - **Database:** Use MongoDB Atlas and allow the API host to connect. Keep development and production databases separate.
 

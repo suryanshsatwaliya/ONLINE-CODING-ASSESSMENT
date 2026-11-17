@@ -61,7 +61,7 @@ export default function Sidebar({ isOpen, onClose, mobileOnly = false }) {
           <span className="brand-icon">
             <ShieldCheck />
           </span>
-          AStarCoders
+          <span className="sidebar-brand-copy"><strong>AStarCoders</strong><small>Where Skills Reach the Stars.</small></span>
           <button
             className="sidebar-close-button"
             type="button"

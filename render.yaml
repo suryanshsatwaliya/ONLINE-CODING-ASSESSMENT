@@ -19,6 +19,22 @@ services:
         value: 8h
       - key: CLIENT_URL
         sync: false
+      - key: MASTER_ADMIN_EMAIL
+        sync: false
+      - key: MASTER_ADMIN_PASSWORD
+        sync: false
+      - key: MASTER_ADMIN_PATH
+        value: control-room
+      - key: ADMIN_TOTP_ENCRYPTION_KEY
+        sync: false
+      - key: ADMIN_SESSION_HOURS
+        value: "8"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: PUBLIC_APP_URL
+        sync: false
       - key: CODE_RUNNER_URL
         sync: false
       - key: CODE_RUNNER_API_KEY

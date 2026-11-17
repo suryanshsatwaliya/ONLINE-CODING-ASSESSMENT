@@ -1,14 +1,15 @@
 # Verification record and acceptance plan
 
-## Performed during generation
+## Verification performed
 
-- Dependencies installed with lockfiles.
-- Vite production build: passed.
-- Backend JavaScript syntax/import checks: passed.
-- Eight unit/adapter tests: passed (MCQ/short grading, weighted code grading, student projection, hidden output redaction, warning deduplication, invalid question validation, Judge0 request limits, AI structured output validation).
-- MongoDB integration tests: attempted but blocked at the temporary MongoDB executable startup with exit code `100`. No claim is made that their application assertions completed in this environment.
-- Automated browser visual check: unavailable because browser installation returned an invalid/truncated download.
-- Live Atlas, sandbox, AI and production deployment: not exercised; no service credentials were provided.
+- Vite production build: passed after the Master Admin implementation.
+- Backend JavaScript syntax checks: passed for all 83 files under `server/src`.
+- Focused admin security, admin integration, and assessment integration suites: 19/19 passed using the isolated MongoDB replica set.
+- Full backend suite: 33/37 passed. Four existing assertions are out of sync with current behavior: AI adapter fixture omits fields required by the strict review schema; authoring tests expect bare LeetCode slugs although imports require problem numbers or URLs; an authoring test expects `null` where the service returns an empty string; and the hidden-runner test expects an older result object shape. These failures were not changed as part of the Master Admin work.
+- `git diff --check`: passed (Git reported only expected LF-to-CRLF working-copy notices).
+- Live Atlas, sandbox, AI and production deployment were not exercised; no service credentials were provided. Browser visual QA was not run.
+
+The system Node shim in this environment points to an inactive Node version, so checks were run with the installed Node v24.22.2 executable directly.
 
 Tests use Node's built-in runner. `npm run test:unit` needs no database. `npm run test:integration` downloads/starts an isolated MongoDB replica set and never uses your Atlas URI. `npm test` runs both. If MongoDB cannot start in your environment, run on a normal development machine with supported MongoDB binary dependencies. Do not weaken OS/container permissions on a production server solely to run the test harness.
 

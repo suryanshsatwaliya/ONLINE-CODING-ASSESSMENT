@@ -11,6 +11,9 @@ Error envelope: `{"success":false,"message":"...","errors":[]}`. Validation: 422
 | POST | /auth/student/verify | `{uid}` → active student's name/course/section |
 | POST | /auth/student/login | `{uid,accessCode}` → assessment-scoped token |
 | GET | /auth/me | Authenticated token identity |
+| POST | /auth/logout | Revoke the current persisted teacher/student session |
+| POST | /auth/teacher/forgot-password | Generic username/email reset request; sends a one-use 15-minute link |
+| POST | /auth/teacher/reset-password | Consume reset token and replace password |
 | GET, POST | /students | Teacher list/create |
 | PUT, DELETE | /students/:id | Owner update/delete without history |
 | GET, POST | /questions | Teacher bank list/create |
@@ -45,6 +48,8 @@ Error envelope: `{"success":false,"message":"...","errors":[]}`. Validation: 422
 | POST | /results/retry/:id | Teacher retries ERROR execution job |
 | POST, GET | /ai/:id | Teacher creates/reads AI review for code submission ID |
 | PATCH | /ai/:id | Teacher review ID: `{qualityScore,efficiencyScore,status}` |
+
+Master Admin endpoints are documented in [ADMINISTRATION.md](./ADMINISTRATION.md). All `/master-admin` management routes are cookie-session authenticated; write operations also require `X-CSRF-Token`.
 
 Student login authorizes exactly one assessment. SCHEDULED or LIVE is required. Deactivated students or revoked assignments are rejected on subsequent protected requests. Role tokens cannot be used interchangeably.
 

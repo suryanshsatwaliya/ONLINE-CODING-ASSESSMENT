@@ -13,6 +13,11 @@ export const events = [
   "DISCONNECTED",
   "RECONNECTED",
 ];
+const defaultEventRules = {
+  FULLSCREEN_EXIT: "WARNING", TAB_HIDDEN: "WARNING", WINDOW_BLUR: "WARNING", WINDOW_FOCUS: "LOG",
+  COPY_ATTEMPT: "WARNING", PASTE_ATTEMPT: "WARNING", CUT_ATTEMPT: "WARNING", CONTEXT_MENU_ATTEMPT: "WARNING",
+  PAGE_EXIT_ATTEMPT: "WARNING", DISCONNECTED: "LOG", RECONNECTED: "LOG",
+};
 export const securitySchema = z.object({
   strictExamMode: z.boolean().default(true),
   requireFullscreen: z.boolean().default(true),
@@ -26,20 +31,9 @@ export const securitySchema = z.object({
   maxWarnings: z.number().int().min(1).max(100).default(3),
   warningAction: z.enum(["AUTO_SUBMIT", "TERMINATE"]).default("AUTO_SUBMIT"),
   eventRules: z
-    .record(z.enum(events), z.enum(["IGNORE", "LOG", "WARNING"]))
-    .default({
-      FULLSCREEN_EXIT: "WARNING",
-      TAB_HIDDEN: "WARNING",
-      WINDOW_BLUR: "WARNING",
-      WINDOW_FOCUS: "LOG",
-      COPY_ATTEMPT: "WARNING",
-      PASTE_ATTEMPT: "WARNING",
-      CUT_ATTEMPT: "WARNING",
-      CONTEXT_MENU_ATTEMPT: "WARNING",
-      PAGE_EXIT_ATTEMPT: "WARNING",
-      DISCONNECTED: "LOG",
-      RECONNECTED: "LOG",
-    }),
+    .partialRecord(z.enum(events), z.enum(["IGNORE", "LOG", "WARNING"]))
+    .default(defaultEventRules)
+    .transform((rules) => ({ ...defaultEventRules, ...rules })),
 });
 const questionFields = z
   .object({

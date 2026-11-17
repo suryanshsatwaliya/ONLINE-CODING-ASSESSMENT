@@ -1,5 +1,6 @@
-import { Student, AssessmentStudent, Attempt } from "../models/index.js";
+import { Student, AssessmentStudent, Attempt, UserSession } from "../models/index.js";
 import ApiError from "../utils/ApiError.js";
+import { audit } from "../services/audit.service.js";
 export async function list(req, res) {
   res.json(
     await Student.find({ createdBy: req.user.id })
@@ -8,13 +9,13 @@ export async function list(req, res) {
   );
 }
 export async function create(req, res) {
-  res.status(201).json(
-    await Student.create({
+  const student = await Student.create({
       ...req.body,
       uid: req.body.uid.toUpperCase(),
       createdBy: req.user.id,
-    }),
-  );
+    });
+  await audit(req, "STUDENT_REGISTERED", "Student registered", { targetType: "Student", targetId: String(student._id), metadata: { uid: student.uid, section: student.section } });
+  res.status(201).json(student);
 }
 export async function createMany(req, res) {
   const students = req.body.students.map((student) => ({
@@ -29,7 +30,9 @@ export async function createMany(req, res) {
   const duplicates = [...new Set([...duplicatesInUpload, ...duplicatesInDatabase])];
   if (duplicates.length)
     throw new ApiError(409, `These UIDs already exist or repeat in the upload: ${duplicates.join(", ")}`);
-  res.status(201).json(await Student.insertMany(students, { ordered: true }));
+  const inserted = await Student.insertMany(students, { ordered: true });
+  await audit(req, "STUDENTS_REGISTERED_BULK", "Students registered in bulk", { metadata: { count: inserted.length } });
+  res.status(201).json(inserted);
 }
 export async function update(req, res) {
   const s = await Student.findOneAndUpdate(
@@ -38,6 +41,8 @@ export async function update(req, res) {
     { new: true, runValidators: true },
   );
   if (!s) throw new ApiError(404, "Student not found");
+  if (req.body.status === "INACTIVE") await UserSession.deleteMany({ userType: "STUDENT", userId: String(s._id) });
+  await audit(req, "STUDENT_UPDATED", "Student record updated", { targetType: "Student", targetId: String(s._id), metadata: { fields: Object.keys(req.body) } });
   res.json(s);
 }
 export async function remove(req, res) {
@@ -52,6 +57,8 @@ export async function remove(req, res) {
       "Student has assessment history; deactivate instead",
     );
   await AssessmentStudent.deleteMany({ student: s._id });
+  await UserSession.deleteMany({ userType: "STUDENT", userId: String(s._id) });
   await s.deleteOne();
+  await audit(req, "STUDENT_DELETED", "Student record deleted", { targetType: "Student", targetId: String(s._id) });
   res.json({ success: true });
 }

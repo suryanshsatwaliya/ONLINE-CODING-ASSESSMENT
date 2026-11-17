@@ -2,7 +2,7 @@ import { env } from "../config/env.js";
 import ApiError from "../utils/ApiError.js";
 
 export const teacherCaptchaEnabled = Boolean(
-  env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY,
+  env.NODE_ENV !== "test" && env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY,
 );
 
 export async function verifyTeacherCaptcha(token) {

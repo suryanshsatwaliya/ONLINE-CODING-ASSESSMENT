@@ -6,6 +6,8 @@ Vercel serves the React/Vite SPA. It calls the Render Express API through an exp
 
 The code follows the requested client/server/docs separation. Routes enforce roles and validation; controllers handle HTTP; services implement assessment transactions, grading, proctor rules and adapters. Models define persistence. Frontend pages compose reusable UI, hooks and service modules. `App.jsx` only composes providers and routing.
 
+Master Admin runs in its own SPA route and protected Express router. Its password-authenticated pre-session can only enroll or verify TOTP; management routes require an active MongoDB-backed admin session and CSRF token. Authenticator secrets are AES-256-GCM encrypted, recovery codes are hashed, and teacher/student JWT sessions are persisted for expiry and logout tracking. Admin analytics query stored assessment, login and session records.
+
 ## State and transactions
 
 Assessments move from DRAFT or SCHEDULED to LIVE by teacher action, then ENDED. Questions are snapshots of bank records; later bank edits do not change an assessment. Assessment content and assignments are locked once LIVE. StartTime is an earliest manual launch time, not an automatic scheduler. EndTime is an absolute hard deadline. Total marks are calculated from selected snapshots and enabled rubric weights, not submitted by students.
@@ -28,4 +30,4 @@ Socket events notify but never replace database persistence. Clients periodicall
 
 Run one Render instance. The provided Socket.IO room adapter and HTTP rate limits are in-process. Before horizontal scaling add a shared Socket.IO adapter, distributed limiter and stronger worker lease ownership/fencing. The current worker executes one submission at a time, up to 30 tests each; size capacity for assessment load. Small lists are bounded (5,000 students, 2,000 bank questions, 1,000 code submissions); add cursor pagination for larger installations. Assessment revision locking deliberately favors correctness over high concurrency. Load-test realistic class sizes before deployment.
 
-For a hardened institutional system, add SSO/per-student login, audit retention/exports, teacher account administration/password recovery, operational alerting and a dedicated scalable job worker. These operational extensions are not falsely represented as implemented.
+For a hardened institutional system, add SSO/per-student login, configurable audit retention/exports, operational alerting and a dedicated scalable job worker. The Master Admin uses a single environment-provisioned account; multi-admin invitations and role delegation are not implemented.

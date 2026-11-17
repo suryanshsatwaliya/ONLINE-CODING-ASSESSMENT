@@ -14,6 +14,7 @@ import codeRoutes from "./routes/code.routes.js";
 import proctorRoutes from "./routes/proctor.routes.js";
 import resultRoutes from "./routes/result.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 export const app = express();
 
@@ -27,6 +28,7 @@ app.disable("x-powered-by");
 app.use(helmet());
 app.use(
   cors({
+    credentials: true,
     origin(origin, callback) {
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -48,6 +50,7 @@ app.get("/api/health", (req, res) =>
 );
 
 app.use("/api/auth", authRoutes);
+app.use("/api/master-admin", adminRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/question-sets", questionSetRoutes);

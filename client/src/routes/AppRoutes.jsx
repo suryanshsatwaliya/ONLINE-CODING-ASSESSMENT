@@ -1,4 +1,4 @@
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import TeacherRoute from "./TeacherRoute";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -22,12 +22,17 @@ import AssessmentLobby from "../pages/Student/AssessmentLobby";
 import Assessment from "../pages/Student/Assessment";
 import Result from "../pages/Student/Result";
 import ExamPreview from "../pages/Teacher/ExamPreview";
+import MasterAdminApp from "../pages/Admin/MasterAdminApp";
+import TeacherPasswordReset from "../pages/Auth/TeacherPasswordReset";
 export default function AppRoutes() {
+  const location = useLocation();
+  if (location.pathname === "/admin" || location.pathname.startsWith("/admin/")) return <main className="student-page"><h1>Page not found</h1><Link to="/">Return home</Link></main>;
   return (
     <Routes>
       <Route element={<PageTransition />}>
         <Route path="/" element={<Home />} />
         <Route path="/login/teacher" element={<TeacherLogin />} />
+        <Route path="/login/teacher/reset" element={<TeacherPasswordReset />} />
         <Route path="/login/student" element={<StudentLogin />} />
       </Route>
       <Route element={<TeacherRoute />}>
@@ -56,16 +61,8 @@ export default function AppRoutes() {
           <Route path="/student/attempt/:id" element={<Assessment />} />
           <Route path="/student/result/:id" element={<Result />} />
         </Route>
-        <Route
-          path="*"
-          element={
-            <main className="student-page">
-              <h1>Page not found</h1>
-              <Link to="/">Return home</Link>
-            </main>
-          }
-        />
       </Route>
+      <Route path="*" element={<MasterAdminApp />} />
     </Routes>
   );
 }

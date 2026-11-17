@@ -2,7 +2,9 @@
 
 ## Implemented controls
 
-Teacher passwords and assessment access codes are bcrypt hashes. JWTs have expiry, issuer, audience and algorithm checks. Every protected HTTP request rechecks the relevant account/assignment. Teacher records are scoped by createdBy. Student tokens include one assessmentId; student operations validate that scope and attempt ownership. Secrets never enter VITE variables.
+Teacher and Master Admin passwords and assessment access codes are bcrypt hashes. JWTs have expiry, issuer, audience and algorithm checks. Teacher/student login sessions are persisted and checked on protected requests; logout and teacher password resets revoke them. Every protected HTTP request rechecks the relevant account/assignment. Teacher records are scoped by createdBy. Student tokens include one assessmentId; student operations validate that scope and attempt ownership. Admin secrets stay on the API; only the non-authenticating entry slug is public in the Vite build.
+
+Master Admin login requires the environment-provisioned email/password and a six-digit TOTP code on every login. TOTP secrets use AES-256-GCM with `ADMIN_TOTP_ENCRYPTION_KEY`; recovery codes are one-use SHA-256 hashes. The AdminSession stores only a hashed opaque session cookie and expires server-side. State-changing requests require both the CSRF cookie and matching header, plus an allowed origin. Password login has account lockouts and admin endpoints have rate limits.
 
 Zod validates request fields, option indexes, sizes and language names. IDs are validated; request JSON is capped at 256 KB. All score values are computed server-side. Draft/live transitions lock assessment content. Writes use MongoDB transactions and conditional lifecycle checks. Unique indexes cover assignments, attempts, event idempotency, results and execution records.
 
@@ -14,7 +16,7 @@ Students receive explicit sanitized question projections and published result to
 
 UID verification intentionally reveals name/course/section, as requested, and is rate-limited. A shared assessment code plus UID is an access gate, not strong individual identity proof. A student who learns another student's UID and the same code could impersonate them. Use institutional SSO or individually authenticated accounts for high-stakes examinations.
 
-Browser JWTs are stored in sessionStorage for this separate-origin baseline. They are not authoritative exam state. Script injection could steal a token: keep dependencies current, avoid unsafe HTML rendering, and apply a frontend CSP compatible with Monaco if you extend the app. Tokens have no refresh/revocation table; deleting/deactivating an account is rechecked, but logout only clears this browser's token. Rotate the JWT secret for emergency global invalidation.
+Teacher/student browser JWTs are stored in sessionStorage for this separate-origin baseline. They are not authoritative exam state. Script injection could steal a token: keep dependencies current, avoid unsafe HTML rendering, and apply a frontend CSP compatible with Monaco if you extend the app. Teacher/student token sessions expire with their JWT and are revoked at logout, password reset, and teacher deactivation. Rotate the JWT secret for emergency global invalidation. Master Admin credentials are held in HttpOnly cookies with a separate readable CSRF token; browser script cannot read the admin session cookie.
 
 ## Code sandbox
 

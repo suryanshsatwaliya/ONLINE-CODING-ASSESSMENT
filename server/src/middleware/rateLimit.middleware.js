@@ -14,3 +14,5 @@ const make = (limit, windowMs) =>
 export const apiLimit = make(600, 60000);
 export const loginLimit = make(30, 15 * 60000);
 export const runLimit = make(15, 60000);
+export const adminLoginLimit = make(10, 15 * 60000);
+export const passwordResetLimit = make(5, 15 * 60000);

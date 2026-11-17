@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Activity,
@@ -77,7 +78,33 @@ function SignInMenu() {
   );
 }
 
+const landingCodeLines = [
+  [{ text: "def", type: "b" }, { text: " solve_challenge(problem):" }],
+  [{ text: "questions = problem.questions" }],
+  [{ text: "for", type: "b" }, { text: " question " }, { text: "in", type: "em" }, { text: " questions:" }],
+  [{ text: "solve(question)" }],
+  [{ text: "return", type: "b" }, { text: " progress.track(problem)" }],
+];
+const landingCodeLength = landingCodeLines.flat().reduce((total, segment) => total + segment.text.length, 0);
+
 function CodePreview() {
+  const [visibleLetters, setVisibleLetters] = useState(0);
+  useEffect(() => {
+    let timer;
+    let letter = 0;
+    const typeNext = () => {
+      letter += 1;
+      setVisibleLetters(letter);
+      if (letter < landingCodeLength) timer = window.setTimeout(typeNext, 35);
+      else timer = window.setTimeout(() => {
+        letter = 0;
+        setVisibleLetters(0);
+        timer = window.setTimeout(typeNext, 350);
+      }, 4000);
+    };
+    timer = window.setTimeout(typeNext, 350);
+    return () => window.clearTimeout(timer);
+  }, []);
   return (
     <div className="landing-visual" aria-label="Animated coding workspace preview">
       <div className="landing-orbit landing-orbit-one"><span>&lt;/&gt;</span></div>
@@ -85,11 +112,12 @@ function CodePreview() {
       <div className="landing-code-window">
         <div className="landing-code-topbar"><span className="landing-window-dots"><i /><i /><i /></span><span><Code2 size={15} /> solution.py</span><span className="landing-code-status"><span /> RUNNING</span></div>
         <div className="landing-code-body">
-          <div><span>01</span><code style={{ "--type-delay": "0s" }}><b>def</b> solve_challenge(problem):</code></div>
-          <div><span>02</span><code style={{ "--type-delay": ".65s" }} className="indent">questions = problem.questions</code></div>
-          <div><span>03</span><code style={{ "--type-delay": "1.3s" }} className="indent"><b>for</b> question <em>in</em> questions:</code></div>
-          <div><span>04</span><code style={{ "--type-delay": "1.95s" }} className="indent-more">solve(question)</code></div>
-          <div><span>05</span><code style={{ "--type-delay": "2.6s" }}><b>return</b> progress.track(problem)</code></div>
+          {(() => { let offset = 0; return landingCodeLines.map((line, lineIndex) => <div key={lineIndex}><span>0{lineIndex + 1}</span><code className={lineIndex === 1 || lineIndex === 2 ? "indent" : lineIndex === 3 ? "indent-more" : ""}>{line.map((segment, segmentIndex) => {
+            const start = offset;
+            offset += segment.text.length;
+            const chars = [...segment.text].map((character, characterIndex) => <span className={`landing-typing-char${start + characterIndex < visibleLetters ? " is-visible" : ""}`} key={characterIndex}>{character}</span>);
+            return segment.type === "b" ? <b key={segmentIndex}>{chars}</b> : segment.type === "em" ? <em key={segmentIndex}>{chars}</em> : <span key={segmentIndex}>{chars}</span>;
+          })}</code></div>); })()}
         </div>
         <div className="landing-code-footer"><span><CheckCircle2 size={14} /> All changes saved</span><span>Python 3</span></div>
       </div>

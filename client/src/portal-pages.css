@@ -204,7 +204,9 @@ html[data-theme="dark"] .landing-secondary-link:hover { border-color: #7468dc; b
 .landing-code-body > div { display: grid; grid-template-columns: 32px 1fr; white-space: nowrap; }
 .landing-code-body > div > span, .teacher-code-lines > div > span { color: #66728a; user-select: none; }
 .landing-code-body code, .teacher-code-lines code { color: #dbe3f6; font: inherit; }
-.landing-code-body code { display: inline-block; overflow: hidden; white-space: nowrap; clip-path: inset(0 100% 0 0); animation: landing-type-in 1.6s cubic-bezier(.22,.61,.36,1) var(--type-delay, 0s) both; }
+.landing-code-body code { display: inline-block; overflow: hidden; white-space: nowrap; }
+.landing-code-body .landing-typing-char { display: inline-block; opacity: 0; transform: translateY(2px); transition: opacity .08s linear, transform .08s linear; }
+.landing-code-body .landing-typing-char.is-visible { opacity: 1; transform: translateY(0); }
 .landing-code-body code b, .teacher-code-lines code b { color: #c1a6ff; font-weight: 500; }
 .landing-code-body code em, .teacher-code-lines code em { color: #71d5c0; font-style: normal; }
 .landing-code-body .indent { padding-left: 22px; }

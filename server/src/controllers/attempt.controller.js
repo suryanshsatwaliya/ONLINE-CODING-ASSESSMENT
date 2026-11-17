@@ -23,8 +23,10 @@ import { startScheduledAssessments } from "../services/assessmentSchedule.servic
 import { gradeAttempt } from "../services/grading.service.js";
 import { emitAttempt } from "../services/realtime.service.js";
 import ApiError from "../utils/ApiError.js";
+import { audit } from "../services/audit.service.js";
 export async function start(req, res) {
   await startScheduledAssessments(req.user.assessmentId);
+  await endAssessmentIfDeadlineReached(req.user.assessmentId);
   let t, a;
   await mongoose.connection.transaction(async (session) => {
     a = await Assessment.findOneAndUpdate(
@@ -178,6 +180,7 @@ export async function submit(req, res) {
   );
   await endAssessmentIfDeadlineReached(a._id);
   await gradeAttempt(t._id);
+  await audit(req, "ASSESSMENT_SUBMITTED", "Student submitted assessment", { actorType: "STUDENT", actorId: req.user.id, targetType: "Assessment", targetId: String(a._id), metadata: { attemptId: String(t._id), status: t.status } });
   emitAttempt(a, t);
   res.json({ status: t.status });
 }

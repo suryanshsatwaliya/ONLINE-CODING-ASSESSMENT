@@ -10,6 +10,7 @@ AStarCoders is a web app for creating and taking classroom assessments. Teachers
 - Review answers, code, and marks after submission.
 - Run and grade coding questions through an optional Judge0-compatible sandbox.
 - Use optional Cloudflare Turnstile verification for teacher sign-in and optional AI-assisted code feedback.
+- Manage teacher and student accounts through a separately authenticated Master Admin area with authenticator 2FA, account recovery, audit logs, and database-backed analytics.
 
 ## Requirements
 
@@ -88,6 +89,8 @@ Never put server secrets in client environment variables or commit real credenti
 - **Database:** Use MongoDB Atlas and allow the API host to connect. Keep development and production databases separate.
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), [docs/CODE_EXECUTION.md](docs/CODE_EXECUTION.md), and [docs/SECURITY.md](docs/SECURITY.md) for detailed deployment, runner, and security guidance.
+
+See [docs/ADMINISTRATION.md](docs/ADMINISTRATION.md) for Master Admin provisioning, Microsoft Authenticator enrollment, email setup, teacher password recovery, admin APIs, and analytics definitions.
 
 ## Useful commands
 

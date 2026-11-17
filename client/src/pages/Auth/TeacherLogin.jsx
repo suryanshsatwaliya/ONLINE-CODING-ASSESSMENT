@@ -41,7 +41,7 @@ function loadTurnstile() {
   return turnstileScriptPromise;
 }
 
-const TurnstileWidget = memo(function TurnstileWidget({ siteKey, theme, onToken, resetRef }) {
+export const TurnstileWidget = memo(function TurnstileWidget({ siteKey, theme, onToken, resetRef }) {
   const hostRef = useRef(null);
   const widgetIdRef = useRef(null);
   const [loadError, setLoadError] = useState("");
@@ -83,13 +83,30 @@ const TurnstileWidget = memo(function TurnstileWidget({ siteKey, theme, onToken,
   </div>;
 });
 
-const teacherCodeLines = [
+export const teacherCodeLines = [
   [{ text: "function", className: "code-keyword" }, { text: " solveChallenge", className: "code-function" }, { text: "() {" }],
   [{ text: "const", className: "code-constant" }, { text: " answer = " }, { text: "buildSolution", className: "code-function" }, { text: "();" }],
   [{ text: "return", className: "code-keyword" }, { text: " " }, { text: "validate", className: "code-function" }, { text: "(answer);" }],
   [{ text: "}" }],
 ];
 const teacherCodeLength = teacherCodeLines.flat().reduce((total, segment) => total + segment.text.length, 0);
+export function useCodeTyping(characterCount) {
+  const [visibleCodeLetters, setVisibleCodeLetters] = useState(0);
+  useEffect(() => {
+    let timer;
+    let letter = 0;
+    const typeNextLetter = () => {
+      letter += 1;
+      setVisibleCodeLetters(letter);
+      if (letter < characterCount) timer = window.setTimeout(typeNextLetter, 35);
+      else timer = window.setTimeout(() => { letter = 0; setVisibleCodeLetters(0); timer = window.setTimeout(typeNextLetter, 350); }, 3000);
+    };
+    timer = window.setTimeout(typeNextLetter, 350);
+    return () => window.clearTimeout(timer);
+  }, [characterCount]);
+  return visibleCodeLetters;
+}
+export function useTeacherCodeTyping() { return useCodeTyping(teacherCodeLength); }
 
 export default function TeacherLogin() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -101,7 +118,7 @@ export default function TeacherLogin() {
     ? { enabled: true, siteKey: configuredTurnstileSiteKey }
     : null);
   const [captchaToken, setCaptchaToken] = useState("");
-  const [visibleCodeLetters, setVisibleCodeLetters] = useState(0);
+  const visibleCodeLetters = useTeacherCodeTyping();
   const resetCaptchaRef = useRef(null);
   const { login } = useAuth();
   const nav = useNavigate();
@@ -118,23 +135,6 @@ export default function TeacherLogin() {
         .catch(() => { if (active) setCaptchaConfig({ enabled: false, unavailable: true }); });
     }
     return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
-    let timer;
-    let letter = 0;
-    const typeNextLetter = () => {
-      letter += 1;
-      setVisibleCodeLetters(letter);
-      if (letter < teacherCodeLength) timer = window.setTimeout(typeNextLetter, 35);
-      else timer = window.setTimeout(() => {
-        letter = 0;
-        setVisibleCodeLetters(0);
-        timer = window.setTimeout(typeNextLetter, 350);
-      }, 3000);
-    };
-    timer = window.setTimeout(typeNextLetter, 350);
-    return () => window.clearTimeout(timer);
   }, []);
 
   const handleCaptchaToken = useCallback((token) => {
@@ -193,8 +193,8 @@ export default function TeacherLogin() {
           <h2>Sign in</h2>
           <fieldset disabled={busy} className="teacher-login-fields">
             <Input
-              label="Email address"
-              type="email"
+              label="Email address or username"
+              type="text"
               autoComplete="username"
               required
               value={form.email}
@@ -209,6 +209,7 @@ export default function TeacherLogin() {
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
           </fieldset>
+          <Link className="teacher-forgot-password" to="/login/teacher/reset">Forgot password?</Link>
           {error && <p className="error teacher-login-error" role="alert">{error}</p>}
           {captchaConfig === null ? <div className="teacher-captcha-unavailable" role="status"><ShieldCheck size={17} /><span>Loading secure sign-in…</span></div> : captchaConfig.enabled ? <section className="teacher-human-verification" aria-label="Human verification">
             <div className="teacher-captcha-heading"><span><ShieldCheck size={17} /> I’m not a robot</span><span className="teacher-captcha-trust">Cloudflare Turnstile</span></div>

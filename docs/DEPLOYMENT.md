@@ -26,6 +26,8 @@ Create a **Web Service**, connect the repository and choose:
 
 Set NODE_ENV=production, MONGODB_URI, JWT_SECRET, JWT_EXPIRES_IN=8h and CLIENT_URL. Set code runner and optional AI credentials. Render supplies PORT; the code reads it. No disk persistence is needed. Choose an always-running deployment for timed tests and background grading.
 
+Provision the Master Admin with `MASTER_ADMIN_EMAIL`, `MASTER_ADMIN_PASSWORD`, `ADMIN_TOTP_ENCRYPTION_KEY`, and `MASTER_ADMIN_PATH`. Configure `ADMIN_SESSION_HOURS`, `RESEND_API_KEY`, `EMAIL_FROM`, and `PUBLIC_APP_URL` for sessions and mail. Set the same route slug as `VITE_MASTER_ADMIN_PATH` in the Vercel build. Production cookies require HTTPS and credentialed CORS from the exact `CLIENT_URL` origin. See [ADMINISTRATION.md](./ADMINISTRATION.md) for first-login enrollment and recovery.
+
 Provision the teacher by temporarily setting seed variables and running `npm run seed` in a Render shell, or run the seed locally with the intended production database URI after reviewing that choice. Remove the seed password afterward. Seed does not overwrite existing teacher passwords.
 
 Use the generated `https://<service>.onrender.com` URL for the client. Confirm `/api/health` works. WebSockets are served on the same origin/port as Express. Do not run the backend as a Vercel serverless function; this deployment uses a persistent Render process for Socket.IO and the worker.

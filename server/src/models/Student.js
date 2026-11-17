@@ -9,6 +9,7 @@ export default model(
     email: String,
     status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "ACTIVE" },
     createdBy: ref("Teacher"),
+    lastLogin: Date,
   },
   [],
 );

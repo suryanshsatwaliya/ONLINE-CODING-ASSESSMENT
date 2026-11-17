@@ -1,4 +1,5 @@
 import { createContext, useState } from "react";
+import { authService } from "../services/authService";
 export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -18,6 +19,7 @@ export function AuthProvider({ children }) {
     setUser(nextUser);
   }
   function logout() {
+    if (user) authService.logout().catch(() => {});
     sessionStorage.clear();
     setUser(null);
   }

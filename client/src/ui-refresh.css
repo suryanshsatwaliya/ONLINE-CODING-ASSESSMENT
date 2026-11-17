@@ -191,6 +191,9 @@ textarea { min-height: 100px; }
 .navbar .brand-copy { display: grid; gap: 3px; line-height: 1.05; }
 .navbar .brand-copy strong { font-size: 28px; font-weight: 650; letter-spacing: -.045em; }
 .navbar .brand-copy small { color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .035em; }
+.sidebar .sidebar-brand-copy { display: grid; gap: 4px; line-height: 1.1; }
+.sidebar .sidebar-brand-copy strong { font-size: 16px; font-weight: 650; }
+.sidebar .sidebar-brand-copy small { color: var(--muted); font-size: 9px; font-weight: 600; letter-spacing: .015em; }
 .landing-hero {
   overflow: visible;
   padding: clamp(52px, 7vw, 86px) max(22px, calc((100vw - 1160px) / 2)) 72px;
@@ -317,7 +320,7 @@ textarea { min-height: 100px; }
   .navbar .brand .brand-icon { width: 32px; height: 32px; flex: 0 0 32px; }
   .navbar .brand-copy { min-width: 0; }
   .navbar .brand-copy strong { font-size: 16px; white-space: nowrap; }
-  .navbar .brand-copy small { display: none; }
+  .navbar .brand-copy small { display: block; font-size: 8px; letter-spacing: 0; }
   .navbar-actions { flex: 0 0 auto; gap: 6px; }
   .navbar-actions .theme-toggle { gap: 0; padding: 6px 8px; }
   .navbar-actions .theme-toggle > span:not(.theme-track) { display: none; }
@@ -326,7 +329,7 @@ textarea { min-height: 100px; }
   .landing-redesign > .navbar .brand .brand-icon { flex: 0 0 32px; }
   .landing-redesign > .navbar .brand-copy { min-width: 0; }
   .landing-redesign > .navbar .brand-copy strong { font-size: 15px; white-space: nowrap; }
-  .landing-redesign > .navbar .brand-copy small { display: none; }
+  .landing-redesign > .navbar .brand-copy small { display: block; font-size: 8px; letter-spacing: 0; }
   .landing-nav-actions { flex: 0 0 auto; gap: 6px; }
   .landing-signin-trigger { min-width: max-content; gap: 4px; padding-inline: 9px; white-space: nowrap; }
   .landing-nav-actions .theme-toggle { gap: 0; padding: 6px 8px; }

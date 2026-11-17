@@ -2,8 +2,10 @@ import mongoose from "mongoose";
 import {
   Attempt,
   Assessment,
+  AssessmentStudent,
   CodeSubmission,
   ProctorEvent,
+  AuditLog,
 } from "../models/index.js";
 import { randomUUID } from "node:crypto";
 import { gradeAttempt } from "./grading.service.js";
@@ -76,10 +78,15 @@ export async function endAssessmentIfDeadlineReached(id) {
       a.admissionClosesAt ||= a.closesAt;
       await a.save({ session });
     }
-    if (assessmentDeadline(a) > Date.now()) return null;
+    const [assignedCount, completedCount] = await Promise.all([
+      AssessmentStudent.countDocuments({ assessment: a._id }).session(session),
+      Attempt.countDocuments({ assessment: a._id, status: { $in: ["SUBMITTED", "TERMINATED", "EXPIRED"] } }).session(session),
+    ]);
+    const allFinished = assignedCount > 0 && completedCount >= assignedCount;
+    if (assessmentDeadline(a) > Date.now() && !allFinished) return null;
     // This write serializes automatic ending with saves, starts and submissions.
     a = await Assessment.findOneAndUpdate({ _id: a._id, status: "LIVE" }, {
-      $set: { status: "ENDED", endedAt: new Date(), endReason: "TIME_EXPIRED" },
+      $set: { status: "ENDED", endedAt: new Date(), endReason: allFinished ? "ALL_FINISHED" : "TIME_EXPIRED" },
       $inc: { revision: 1 },
     }, { session, new: true });
     const attempts = await Attempt.find({ assessment: a._id, status: "ACTIVE" }).session(session);
@@ -90,6 +97,8 @@ export async function endAssessmentIfDeadlineReached(id) {
     return { a, attempts };
   });
   if (closed) {
+    try { await AuditLog.create({ eventType: "ASSESSMENT_AUTO_ENDED", actorType: "SYSTEM", targetType: "Assessment", targetId: String(closed.a._id), action: `Assessment automatically ended: ${closed.a.endReason}`, metadata: { reason: closed.a.endReason, attemptsClosed: closed.attempts.length } }); }
+    catch (error) { console.error("Automatic assessment audit log write failed:", error.message); }
     emitAssessment(closed.a, "ASSESSMENT_ENDED", { assessmentId: closed.a._id, reason: closed.a.endReason });
     for (const t of closed.attempts) {
       emitAttempt(closed.a, t);

@@ -24,6 +24,7 @@ import ApiError from "../utils/ApiError.js";
 import { startScheduledAssessments } from "../services/assessmentSchedule.service.js";
 import { assessmentDeadline } from "../services/assessmentTiming.service.js";
 import { emitAttempt } from "../services/realtime.service.js";
+import { audit } from "../services/audit.service.js";
 async function payload(body, user, previous = null) {
   const qs = await Question.find({
     _id: { $in: body.questionIds },
@@ -104,18 +105,22 @@ export async function get(req, res) {
   res.json({ ...assessment.toObject(), serverTime: new Date() });
 }
 export async function create(req, res) {
-  res.status(201).json(await Assessment.create({
+  const assessment = await Assessment.create({
     ...(await payload(req.body, req.user)), createdBy: req.user.id,
-  }));
+  });
+  await audit(req, "ASSESSMENT_CREATED", "Assessment created", { targetType: "Assessment", targetId: String(assessment._id), metadata: { status: assessment.status, title: assessment.title } });
+  res.status(201).json(assessment);
 }
 export async function reuse(req, res) {
   const source = await ownAssessment(req.params.id, req.user);
   if (source.status !== "ENDED")
     throw new ApiError(409, "Only completed assessments can be reused.");
-  res.status(201).json(await Assessment.create({
+  const assessment = await Assessment.create({
     ...(await payload(req.body, req.user, source)),
     createdBy: req.user.id,
-  }));
+  });
+  await audit(req, "ASSESSMENT_CREATED", "Assessment copied", { targetType: "Assessment", targetId: String(assessment._id), metadata: { sourceId: String(source._id) } });
+  res.status(201).json(assessment);
 }
 export async function update(req, res) {
   const previous = await ownAssessment(req.params.id, req.user);
@@ -125,6 +130,7 @@ export async function update(req, res) {
     { $set: p, $inc: { revision: 1 } }, { new: true },
   );
   if (!assessment) throw new ApiError(409, "This assessment changed or is locked. Reload before editing.");
+  await audit(req, "ASSESSMENT_UPDATED", "Assessment updated", { targetType: "Assessment", targetId: String(assessment._id) });
   res.json(assessment);
 }
 export async function remove(req, res) {
@@ -143,6 +149,7 @@ export async function remove(req, res) {
       throw new ApiError(409, "An assessment with student attempts cannot be deleted.");
     await AssessmentStudent.deleteMany({ assessment: assessment._id }).session(session);
   });
+  await audit(req, "ASSESSMENT_DELETED", "Assessment deleted", { targetType: "Assessment", targetId: req.params.id });
   res.status(204).end();
 }
 export async function assign(req, res) {
@@ -193,6 +200,7 @@ export async function assign(req, res) {
       );
     count = students.length;
   });
+  await audit(req, "ASSESSMENT_ASSIGNMENTS_UPDATED", "Assessment students assigned", { targetType: "Assessment", targetId: req.params.id, metadata: { assigned: count } });
   res.json({ assigned: count });
 }
 export async function assignments(req, res) {
@@ -262,6 +270,7 @@ export async function start(req, res) {
     await a.save({ session });
   });
   emitAssessment(a, "ASSESSMENT_STARTED", { assessmentId: a._id });
+  await audit(req, "ASSESSMENT_STARTED", "Assessment started", { targetType: "Assessment", targetId: String(a._id) });
   res.json(a);
 }
 export async function end(req, res) {
@@ -288,6 +297,7 @@ export async function end(req, res) {
   });
   for (const id of ids) await gradeAttempt(id);
   emitAssessment(a, "ASSESSMENT_ENDED", { assessmentId: a._id });
+  await audit(req, "ASSESSMENT_ENDED", "Assessment ended by teacher", { targetType: "Assessment", targetId: String(a._id), metadata: { attemptsSubmitted: ids.length } });
   res.json(a);
 }
 export async function publish(req, res) {

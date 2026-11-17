@@ -8,6 +8,9 @@ import ApiError from "../utils/ApiError.js";
 import QRCode from "qrcode";
 import { notifyAdmin } from "../services/email.service.js";
 import { verifyTeacherCaptcha } from "../services/turnstile.service.js";
+import { readCookie } from "../utils/adminCookies.js";
+import { logAdminSession } from "../utils/adminSessionDiagnostics.js";
+import mongoose from "mongoose";
 const cookieBase = () => `Path=/; HttpOnly; SameSite=${env.NODE_ENV === "production" ? "None" : "Lax"}${env.NODE_ENV === "production" ? "; Secure" : ""}`;
 const setSessionCookies = (res, token, csrf) => res.setHeader("Set-Cookie", [
   `master_session=${encodeURIComponent(token)}; ${cookieBase()}`,
@@ -21,15 +24,21 @@ async function failed(req, email) {
 }
 function sessionDuration() { return 15 * 60 * 1000; }
 export async function start(req, res) {
-  const token = req.headers.cookie?.match(/(?:^|;\s*)master_session=([^;]+)/)?.[1];
+  const cookieHeader = req.get("cookie");
+  const token = readCookie(cookieHeader, "master_session");
   const entry = String(req.get("x-admin-entry") || "").replace(/^\/+|\/+$/g, "");
   if (token) {
-    const session = await AdminSession.findOne({ tokenHash: hashToken(decodeURIComponent(token)), status: "ACTIVE", expiresAt: { $gt: new Date() } }).select("+csrfToken +routeId").populate("admin", "email totpEnabled");
+    const session = await AdminSession.findOne({ tokenHash: hashToken(token) }).select("+csrfToken +routeId").populate("admin", "email totpEnabled");
     const routeId = entry.split("/")[0];
-    if (session?.admin?.totpEnabled && session.routeId && routeId === session.routeId) {
+    if (session?.admin?.totpEnabled && session.expiresAt > new Date() && session.status === "ACTIVE" && session.routeId && routeId === session.routeId) {
+      logAdminSession("entry_lookup_found", { endpoint: req.path, sessionCookiePresent: true, sessionRef: String(session._id), sessionStatus: session.status, dbReadyState: mongoose.connection.readyState });
       return res.json({ allowed: true, authenticated: true, routeId: session.routeId, csrfToken: session.csrfToken, user: { email: session.admin.email } });
     }
-    await AdminSession.deleteOne({ tokenHash: hashToken(decodeURIComponent(token)) });
+    const reason = !session ? "not_found" : session.expiresAt <= new Date() ? "expired" : session.status !== "ACTIVE" ? "not_active" : "route_mismatch";
+    logAdminSession(`entry_lookup_${reason}`, { endpoint: req.path, sessionCookiePresent: true, sessionFound: Boolean(session), ...(session ? { sessionRef: String(session._id), sessionStatus: session.status } : {}), dbReadyState: mongoose.connection.readyState });
+    await AdminSession.deleteOne({ tokenHash: hashToken(token) });
+  } else {
+    logAdminSession("entry_lookup_missing_cookie", { endpoint: req.path, cookieHeaderPresent: Boolean(cookieHeader), sessionCookiePresent: false, dbReadyState: mongoose.connection.readyState });
   }
   clearSessionCookies(res);
   res.json({ allowed: entry === env.MASTER_ADMIN_PATH, authenticated: false });
@@ -40,7 +49,8 @@ export function entryRedirect(req, res) {
 }
 async function createSession(admin, status, req, res, maxAge = sessionDuration()) {
   const token = randomToken(); const csrf = randomToken(24); const expiresAt = new Date(Date.now() + maxAge);
-  await AdminSession.create({ admin: admin._id, tokenHash: hashToken(token), csrfHash: hashToken(csrf), csrfToken: csrf, status, expiresAt, ip: ip(req), userAgent: req.get("user-agent")?.slice(0, 300) });
+  const session = await AdminSession.create({ admin: admin._id, tokenHash: hashToken(token), csrfHash: hashToken(csrf), csrfToken: csrf, status, expiresAt, ip: ip(req), userAgent: req.get("user-agent")?.slice(0, 300) });
+  logAdminSession("created", { sessionRef: String(session._id), sessionStatus: status, expiresInMs: maxAge, dbReadyState: mongoose.connection.readyState });
   setSessionCookies(res, token, csrf); return { csrfToken: csrf, expiresAt, state: status };
 }
 export async function login(req, res) {
@@ -71,8 +81,7 @@ export async function verify(req, res) {
     if (!admin.pendingTotpEncrypted || !verifyTotp(decryptSecret(admin.pendingTotpEncrypted), code)) { await failed(req, admin.email); throw new ApiError(401, "Authenticator code is invalid."); }
     const codes = makeRecoveryCodes(); admin.totpSecretEncrypted = admin.pendingTotpEncrypted; admin.pendingTotpEncrypted = undefined; admin.totpEnabled = true; admin.recoveryCodeHashes = codes.map(hashToken); admin.lastLogin = new Date(); await admin.save();
     req.adminSession.status = "ACTIVE"; req.adminSession.routeId = randomToken(24); req.adminSession.expiresAt = new Date(Date.now() + sessionDuration()); req.adminSession.lastSeenAt = new Date(); await req.adminSession.save();
-    const cookieValues = Object.fromEntries((req.headers.cookie || "").split(";").map((part) => part.trim().split(/=(.*)/s).slice(0, 2)));
-    setSessionCookies(res, decodeURIComponent(cookieValues.master_session || ""), decodeURIComponent(cookieValues.master_csrf || ""));
+    setSessionCookies(res, readCookie(req.get("cookie"), "master_session") || "", readCookie(req.get("cookie"), "master_csrf") || "");
     const recoveryCodes = codes;
     await LoginEvent.create({ userType: "MASTER_ADMIN", userId: String(admin._id), email: admin.email, outcome: "SUCCESS", ip: ip(req), userAgent: req.get("user-agent") });
     await audit(req, "ADMIN_TOTP_ENABLED", "Authenticator enabled");
@@ -86,8 +95,7 @@ export async function verify(req, res) {
   }
   if (!accepted) { await failed(req, admin.email); throw new ApiError(401, "Authenticator code is invalid."); }
   await MasterAdmin.updateOne({ _id: admin._id }, { $set: { lastLogin: new Date() } }); req.adminSession.status = "ACTIVE"; req.adminSession.routeId = randomToken(24); req.adminSession.expiresAt = new Date(Date.now() + sessionDuration()); await req.adminSession.save();
-  const cookieValues = Object.fromEntries((req.headers.cookie || "").split(";").map((part) => part.trim().split(/=(.*)/s).slice(0, 2)));
-  setSessionCookies(res, decodeURIComponent(cookieValues.master_session || ""), decodeURIComponent(cookieValues.master_csrf || ""));
+  setSessionCookies(res, readCookie(req.get("cookie"), "master_session") || "", readCookie(req.get("cookie"), "master_csrf") || "");
   await LoginEvent.create({ userType: "MASTER_ADMIN", userId: String(admin._id), email: admin.email, outcome: "SUCCESS", ip: ip(req), userAgent: req.get("user-agent") });
   await audit(req, "ADMIN_LOGIN", "Master Admin logged in");
   res.json({ user: { email: admin.email }, state: "ACTIVE", routeId: req.adminSession.routeId });

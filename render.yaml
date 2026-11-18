@@ -24,7 +24,7 @@ services:
       - key: MASTER_ADMIN_PASSWORD
         sync: false
       - key: MASTER_ADMIN_PATH
-        value: control-room
+        value: admin-suryansh-akriti
       - key: ADMIN_TOTP_ENCRYPTION_KEY
         sync: false
       - key: ADMIN_SESSION_HOURS

@@ -26,8 +26,6 @@ function responseHeaders(source, res) {
     if (name.toLowerCase() === "set-cookie" || HOP_BY_HOP_HEADERS.has(name.toLowerCase())) continue;
     res.setHeader(name, value);
   }
-
-  // Node's Headers.getSetCookie() preserves multiple Set-Cookie headers.
   const cookies = source.getSetCookie?.() || [];
   if (cookies.length) res.setHeader("Set-Cookie", cookies);
 }
@@ -49,14 +47,18 @@ export default async function handler(req, res) {
   }
 
   const incoming = new URL(req.url, `https://${req.headers.host || "localhost"}`);
-  if (!incoming.pathname.startsWith("/api/master-admin/")) {
+  const path = incoming.searchParams.get("__admin_proxy_path") || "";
+  const segments = path.split("/");
+  if (!path || segments.some((segment) => !segment || segment === "." || segment === "..")) {
     return res.status(404).json({ message: "Route not found." });
   }
 
-  // VITE_API_URL is the Render API root, including /api. The browser always
-  // talks to this Vercel origin, while Cookie and Origin headers are forwarded.
-  const suffix = incoming.pathname.slice("/api".length);
-  const destination = new URL(`${targetRoot.href.replace(/\/+$/, "")}${suffix}${incoming.search}`);
+  const forwardedQuery = new URLSearchParams(incoming.searchParams);
+  forwardedQuery.delete("__admin_proxy_path");
+  const search = forwardedQuery.toString();
+  const destination = new URL(
+    `${targetRoot.href.replace(/\/+$/, "")}/master-admin/${path}${search ? `?${search}` : ""}`,
+  );
   const headers = requestHeaders(req.headers);
   const method = req.method || "GET";
   const body = ["GET", "HEAD"].includes(method) || req.body == null
@@ -66,20 +68,11 @@ export default async function handler(req, res) {
       : JSON.stringify(req.body);
 
   try {
-    const upstream = await fetch(destination, {
-      method,
-      headers,
-      body,
-      redirect: "manual",
-    });
-
+    const upstream = await fetch(destination, { method, headers, body, redirect: "manual" });
     responseHeaders(upstream.headers, res);
     res.statusCode = upstream.status;
 
-    // Preserve the current frontend host when the API redirects an unknown
-    // admin path back to the configured entry URL. This avoids switching from
-    // a custom domain to a Vercel alias (or vice versa) mid-login.
-    if (incoming.pathname === "/api/master-admin/auth/entry-redirect") {
+    if (path === "auth/entry-redirect") {
       const location = upstream.headers.get("location");
       if (location) {
         const redirect = new URL(location, destination);
@@ -90,8 +83,7 @@ export default async function handler(req, res) {
     if (method === "HEAD" || upstream.status === 204 || upstream.status === 304) {
       return res.end();
     }
-    const responseBody = Buffer.from(await upstream.arrayBuffer());
-    return res.end(responseBody);
+    return res.end(Buffer.from(await upstream.arrayBuffer()));
   } catch {
     return res.status(502).json({ message: "Master Admin API is temporarily unavailable." });
   }

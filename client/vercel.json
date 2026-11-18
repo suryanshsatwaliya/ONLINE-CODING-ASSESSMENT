@@ -1,7 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/((?!assets/|api/).*)",
+      "source": "/api/master-admin/:path*",
+      "destination": "/api/admin-proxy?__admin_proxy_path=:path*"
+    },
+    {
+      "source": "/((?!assets/).*)",
       "destination": "/index.html"
     }
   ],

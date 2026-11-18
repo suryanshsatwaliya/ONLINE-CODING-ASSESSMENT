@@ -47,6 +47,8 @@ VITE_SOCKET_URL=https://YOUR-API.onrender.com
 
 Deploy, then set Render CLIENT_URL to your exact Vercel origin (e.g. `https://YOUR-PROJECT.vercel.app`) with no trailing slash. Redeploy Render. Changes to VITE variables require a new client build. The included vercel.json rewrites application deep links to index.html while leaving `/assets/` intact.
 
+The Master Admin client sends its requests through the Vercel `/api/*` function, which proxies to the Render API URL in `VITE_API_URL` and forwards cookies and the request origin. This keeps the session cookie first-party on the frontend host, including when the app is opened through a custom domain. Keep `VITE_API_URL` configured for Vercel's Production deployment and set Render `CLIENT_URL` to the exact public frontend origin used for sign-in (for example, `https://astarcoders.in` if that is the canonical URL). The proxy keeps entry redirects on the same frontend host. Master Admin cookies use `SameSite=Lax`; the production cookies are still `Secure` and the session cookie remains `HttpOnly`.
+
 Do not put database, JWT, sandbox or AI secrets in Vercel frontend variables. Do not allow every preview origin by default; add a separate test backend/origin if needed.
 
 Official guides: https://vercel.com/docs/frameworks/frontend/vite and https://vite.dev/guide/static-deploy

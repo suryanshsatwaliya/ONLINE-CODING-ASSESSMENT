@@ -11,12 +11,12 @@ import { verifyTeacherCaptcha } from "../services/turnstile.service.js";
 import { readCookie } from "../utils/adminCookies.js";
 import { logAdminSession } from "../utils/adminSessionDiagnostics.js";
 import mongoose from "mongoose";
-const cookieBase = () => `Path=/; HttpOnly; SameSite=${env.NODE_ENV === "production" ? "None" : "Lax"}${env.NODE_ENV === "production" ? "; Secure" : ""}`;
+const cookieBase = () => `Path=/; HttpOnly; SameSite=Lax${env.NODE_ENV === "production" ? "; Secure" : ""}`;
 const setSessionCookies = (res, token, csrf) => res.setHeader("Set-Cookie", [
   `master_session=${encodeURIComponent(token)}; ${cookieBase()}`,
-  `master_csrf=${encodeURIComponent(csrf)}; Path=/; SameSite=${env.NODE_ENV === "production" ? "None" : "Lax"}${env.NODE_ENV === "production" ? "; Secure" : ""}`,
+  `master_csrf=${encodeURIComponent(csrf)}; Path=/; SameSite=Lax${env.NODE_ENV === "production" ? "; Secure" : ""}`,
 ]);
-const clearSessionCookies = (res) => res.setHeader("Set-Cookie", [`master_session=; ${cookieBase()}; Max-Age=0`, `master_csrf=; Path=/; SameSite=${env.NODE_ENV === "production" ? "None" : "Lax"}${env.NODE_ENV === "production" ? "; Secure" : ""}; Max-Age=0`]);
+const clearSessionCookies = (res) => res.setHeader("Set-Cookie", [`master_session=; ${cookieBase()}; Max-Age=0`, `master_csrf=; Path=/; SameSite=Lax${env.NODE_ENV === "production" ? "; Secure" : ""}; Max-Age=0`]);
 function ip(req) { return req.ip?.slice(0, 64); }
 async function failed(req, email) {
   await LoginEvent.create({ userType: "MASTER_ADMIN", email, outcome: "FAILED", ip: ip(req), userAgent: req.get("user-agent") });

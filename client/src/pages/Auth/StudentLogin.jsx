@@ -7,7 +7,7 @@ import { useAuth } from "../../hooks/useAuth";
 import Navbar from "../../components/layout/Navbar";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
-import { chromeOnlyMessage, isGoogleChrome } from "../../utils/browserPolicy";
+import { chromeOnlyMessage, incognitoRequiredMessage, isGoogleChrome, isMobilePhone } from "../../utils/browserPolicy";
 
 const studentCodeLines = [
   [{ text: "def", className: "code-keyword" }, { text: " solve(problem):" }],
@@ -26,9 +26,10 @@ export default function StudentLogin() {
   const [visibleCodeLetters, setVisibleCodeLetters] = useState(0);
   const pending = useRef(false);
   const { login } = useAuth(), nav = useNavigate();
+  const mobilePhone = isMobilePhone();
   const chromeAllowed = isGoogleChrome();
   useEffect(() => {
-    if (!chromeAllowed) return;
+    if (mobilePhone) return;
     let timer;
     let letter = 0;
     const typeNext = () => {
@@ -43,14 +44,15 @@ export default function StudentLogin() {
     };
     timer = window.setTimeout(typeNext, 350);
     return () => window.clearTimeout(timer);
-  }, [chromeAllowed]);
+  }, [mobilePhone]);
   async function submit(event) {
     event.preventDefault();
     if (pending.current) return;
-    if (!chromeAllowed) {
+    if (mobilePhone) {
       setError(chromeOnlyMessage);
       return;
     }
+    if (!chromeAllowed) return;
     if (!/^[A-Z0-9]{6}$/.test(accessCode)) {
       setError("Enter exactly 6 letters and numbers from your teacher’s code.");
       return;
@@ -63,7 +65,7 @@ export default function StudentLogin() {
     } catch (e) { setError(errorMessage(e)); }
     finally { pending.current = false; setBusy(false); }
   }
-  if (!chromeAllowed) return <>
+  if (mobilePhone) return <>
     <Navbar />
     <main className="student-device-block">
       <section className="student-device-notice" role="status">
@@ -107,6 +109,7 @@ export default function StudentLogin() {
             <Input label="Assessment code" className="entry-code-input" placeholder="A7K2M9" autoComplete="off" autoCapitalize="characters" spellCheck={false} minLength={6} maxLength={6} pattern="[A-Z0-9]{6}" title="Enter 6 uppercase letters and numbers." aria-describedby="entry-code-hint" required value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))} />
             <p id="entry-code-hint" className="entry-code-hint">6 characters · uppercase letters and numbers</p>
             {error && <p className="notice error" role="alert">{error}</p>}
+            {!chromeAllowed && <p className="browser-block-warning" role="alert">{incognitoRequiredMessage}</p>}
             <Button type="submit" disabled={busy || !chromeAllowed}>{busy ? "Checking your details…" : "Join assessment"}<ArrowRight size={18} /></Button>
           </fieldset>
           <div className="entry-help"><strong>Before your exam</strong><p>Open the portal in Chrome Incognito. A normal website cannot verify Incognito mode or reliably list installed extensions.</p></div>

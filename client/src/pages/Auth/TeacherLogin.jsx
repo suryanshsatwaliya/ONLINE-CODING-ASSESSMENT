@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle2, GraduationCap, ShieldCheck } from "lucide-react";
 import { authService } from "../../services/authService";
-import { errorMessage } from "../../services/api";
+import { api, errorMessage } from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../context/ThemeContext";
 import Navbar from "../../components/layout/Navbar";
@@ -126,6 +126,9 @@ export default function TeacherLogin() {
 
   useEffect(() => {
     let active = true;
+    // Wake an idle hosted API while the teacher fills the form and the
+    // Turnstile widget loads, instead of making the sign-in click pay that delay.
+    if (configuredTurnstileSiteKey) api.get("/health").catch(() => {});
     // Start the Cloudflare download alongside the config request so the two
     // network waits do not block each other.
     loadTurnstile().catch(() => {});

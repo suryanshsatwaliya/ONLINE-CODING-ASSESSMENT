@@ -26,18 +26,23 @@ export function teacherCaptchaConfig(req, res) {
 }
 
 export async function teacherLogin(req, res) {
-  await verifyTeacherCaptcha(req.body.captchaToken);
   const identifier = String(req.body.email || req.body.identifier || "").trim().toLowerCase();
-  const t = await Teacher.findOne({ $or: [{ email: identifier }, { username: identifier }], status: { $ne: "INACTIVE" } }).select("+passwordHash");
+  const [t] = await Promise.all([
+    Teacher.findOne({ $or: [{ email: identifier }, { username: identifier }], status: { $ne: "INACTIVE" } }).select("+passwordHash"),
+    verifyTeacherCaptcha(req.body.captchaToken),
+  ]);
   if (!t || !(await bcrypt.compare(req.body.password, t.passwordHash))) {
     await LoginEvent.create({ userType: "TEACHER", email: identifier, outcome: "FAILED", ip: req.ip, userAgent: req.get("user-agent") });
     await audit(req, "TEACHER_LOGIN_FAILED", "Teacher sign-in failed", { actorType: "TEACHER", actorEmail: identifier });
     throw new ApiError(401, "Invalid email or password");
   }
-  t.lastLogin = new Date(); await t.save();
-  const jti = randomUUID(); await createLoginSession(req, "TEACHER", t._id, jti);
-  await LoginEvent.create({ userType: "TEACHER", userId: String(t._id), email: t.email, outcome: "SUCCESS", ip: req.ip, userAgent: req.get("user-agent") });
-  await audit(req, "TEACHER_LOGIN", "Teacher signed in", { actorType: "TEACHER", actorId: String(t._id), actorEmail: t.email });
+  const jti = randomUUID();
+  await Promise.all([
+    Teacher.updateOne({ _id: t._id }, { $set: { lastLogin: new Date() } }),
+    createLoginSession(req, "TEACHER", t._id, jti),
+    LoginEvent.create({ userType: "TEACHER", userId: String(t._id), email: t.email, outcome: "SUCCESS", ip: req.ip, userAgent: req.get("user-agent") }),
+    audit(req, "TEACHER_LOGIN", "Teacher signed in", { actorType: "TEACHER", actorId: String(t._id), actorEmail: t.email }),
+  ]);
   res.json({
     token: issueToken({ id: String(t._id), role: "TEACHER", tokenVersion: t.tokenVersion || 0, jti }),
     user: { id: t._id, name: t.name, email: t.email, role: "TEACHER" },

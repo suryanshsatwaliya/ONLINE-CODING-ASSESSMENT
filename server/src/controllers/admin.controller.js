@@ -1,16 +1,19 @@
 import bcrypt from "bcrypt";
 import crypto from "node:crypto";
-import { Teacher, Student, Assessment, AssessmentStudent, Attempt, Result, AdminSession, AuditLog, LoginEvent, UserSession } from "../models/index.js";
+import { Teacher, TeacherInvite, TeacherResetToken, Student, Course, Question, QuestionSet, Assessment, AssessmentStudent, Attempt, Answer, CodeSubmission, ExecutionResult, ProctorEvent, Result, AIReview, AdminSession, AuditLog, LoginEvent, UserSession } from "../models/index.js";
 import { audit } from "../services/audit.service.js";
 import { sendEmail, notifyAdmin } from "../services/email.service.js";
-import { hashToken } from "../services/security.service.js";
+import { hashToken, randomToken } from "../services/security.service.js";
 import ApiError from "../utils/ApiError.js";
 import mongoose from "mongoose";
 import { closeAttempt } from "../services/attemptLifecycle.service.js";
 import { gradeAttempt } from "../services/grading.service.js";
 import { emitAssessment } from "../services/realtime.service.js";
+import { env } from "../config/env.js";
 
 const password = () => `${crypto.randomBytes(12).toString("base64url")}aA1!`;
+const usernameAlphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+const randomTeacherUsername = () => Array.from({ length: 7 }, () => usernameAlphabet[crypto.randomInt(usernameAlphabet.length)]).join("");
 const publicTeacher = (teacher) => ({ id: String(teacher._id), name: teacher.name, email: teacher.email, username: teacher.username, status: teacher.status || "ACTIVE", createdAt: teacher.createdAt, lastLogin: teacher.lastLogin });
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 export async function overview(req, res) {
@@ -33,33 +36,114 @@ export async function listTeachers(req, res) {
   const students = new Map(studentCounts.map((x) => [String(x._id), x])); const assessments = new Map(assessmentCounts.map((x) => [String(x._id), x.count]));
   res.json({ rows: rows.map((teacher) => ({ ...publicTeacher(teacher), students: students.get(String(teacher._id))?.count || 0, sections: students.get(String(teacher._id))?.sections || [], assessments: assessments.get(String(teacher._id)) || 0 })), total });
 }
+export async function generateTeacherUsername(req, res) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const username = randomTeacherUsername();
+    if (!await Teacher.exists({ username }) && !await TeacherInvite.exists({ username })) return res.json({ username });
+  }
+  throw new ApiError(503, "Could not generate an available username. Please try again.");
+}
 export async function createTeacher(req, res) {
-  const email = req.body.email.trim().toLowerCase(); const username = req.body.username.trim().toLowerCase();
-  if (await Teacher.exists({ $or: [{ email }, { username }] })) throw new ApiError(409, "Email or username is already assigned.");
-  const temporaryPassword = password();
-  const teacher = await Teacher.create({ name: req.body.name.trim(), email, username, passwordHash: await bcrypt.hash(temporaryPassword, 12), role: "TEACHER", status: "ACTIVE" });
-  let emailSent = false;
-  try { const sent = await sendEmail({ to: email, subject: "Your AStarCoders teacher account", text: `Your account is ready. Username: ${username}. Temporary password: ${temporaryPassword}. Please sign in and change your password.`, html: `<p>Your teacher account is ready.</p><p>Username: <strong>${escapeHtml(username)}</strong><br>Temporary password: <strong>${escapeHtml(temporaryPassword)}</strong></p><p>Please sign in and change your password.</p>` }); emailSent = sent.sent; }
-  catch (error) { await audit(req, "TEACHER_CREDENTIAL_EMAIL_FAILED", "Teacher credential email failed", { targetType: "Teacher", targetId: String(teacher._id), metadata: { message: error.message } }); }
-  await audit(req, "TEACHER_CREATED", "Teacher account created", { targetType: "Teacher", targetId: String(teacher._id), metadata: { email, username } });
-  try { await notifyAdmin("AStarCoders: teacher account created", `A teacher account was created for ${email}. Credential delivery: ${emailSent ? "sent" : "failed"}.`); } catch {}
-  res.status(201).json({ teacher: publicTeacher(teacher), emailSent, credentials: emailSent ? undefined : "Email delivery failed. Use Reset password to send a new temporary password." });
+  const email = req.body.email.trim().toLowerCase();
+  if (await Teacher.exists({ email })) throw new ApiError(409, "This email is already assigned to a teacher.");
+  let username = String(req.body.username || "").trim().toLowerCase();
+  if (!username || await Teacher.exists({ username }) || await TeacherInvite.exists({ username })) {
+    username = "";
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const candidate = randomTeacherUsername();
+      if (!await Teacher.exists({ username: candidate }) && !await TeacherInvite.exists({ username: candidate })) { username = candidate; break; }
+    }
+  }
+  if (!username) throw new ApiError(503, "Could not generate an available username. Please try again.");
+  await TeacherInvite.deleteMany({ email });
+  const token = randomToken();
+  const invite = await TeacherInvite.create({ name: req.body.name.trim(), email, username, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 30 * 60000) });
+  const verifyLink = `${String(env.PUBLIC_APP_URL || env.CLIENT_URL).split(",")[0].trim().replace(/\/$/, "")}/login/teacher/verify-email?token=${encodeURIComponent(token)}`;
+  try {
+    const sent = await sendEmail({ to: email, subject: "Verify your AStarCoders teacher email", text: `Verify this email address within 30 minutes to activate your teacher account: ${verifyLink}`, html: `<p>Verify this email address within 30 minutes to activate your AStarCoders teacher account.</p><p><a href="${escapeHtml(verifyLink)}">Verify email address</a></p><p>If you did not expect this message, you can ignore it.</p>` });
+    if (!sent.sent) throw Object.assign(new Error("Email provider is not configured."), { userMessage: "Email delivery is not configured. Set RESEND_API_KEY and EMAIL_FROM on the server." });
+  } catch (error) {
+    await TeacherInvite.deleteOne({ _id: invite._id });
+    console.error("Teacher verification email failed:", { status: error.status, code: error.code, reason: error.message });
+    const message = error.userMessage || (error.emailInvalid ? "Email does not exist or cannot receive emails." : error.message === "Email delivery is not configured." ? "Email delivery is not configured. Set RESEND_API_KEY and EMAIL_FROM on the server." : "Could not send the verification email. Check the email settings and try again.");
+    throw new ApiError(error.emailInvalid ? 422 : 502, message);
+  }
+  await audit(req, "TEACHER_EMAIL_VERIFICATION_SENT", "Teacher email verification requested", { targetType: "TeacherInvite", targetId: String(invite._id), metadata: { email } });
+  res.status(202).json({ verificationEmailSent: true, username, message: "Verification email sent. The teacher account will be created after the email is verified." });
 }
 export async function updateTeacher(req, res) {
   const teacher = await Teacher.findById(req.params.id); if (!teacher) throw new ApiError(404, "Teacher not found.");
   const email = req.body.email?.trim().toLowerCase(); const username = req.body.username?.trim().toLowerCase();
   if (await Teacher.exists({ _id: { $ne: teacher._id }, $or: [{ email }, { username }] })) throw new ApiError(409, "Email or username is already assigned.");
   if (req.body.name) teacher.name = req.body.name.trim(); if (email) teacher.email = email; if (username) teacher.username = username;
-  if (req.body.status && ["ACTIVE", "INACTIVE"].includes(req.body.status)) { if (teacher.status !== req.body.status && req.body.status === "INACTIVE") { teacher.tokenVersion += 1; teacher.sessionsInvalidBefore = new Date(); await UserSession.deleteMany({ userType: "TEACHER", userId: String(teacher._id) }); } teacher.status = req.body.status; }
   await teacher.save(); await audit(req, "TEACHER_UPDATED", "Teacher account updated", { targetType: "Teacher", targetId: String(teacher._id), metadata: { fields: Object.keys(req.body) } });
-  if (req.body.status === "INACTIVE") { try { await notifyAdmin("AStarCoders: teacher deactivated", `Teacher account ${teacher.email} was deactivated.`); } catch {} }
   res.json({ teacher: publicTeacher(teacher) });
 }
+export async function setTeacherStatus(req, res) {
+  const teacher = await Teacher.findById(req.params.id);
+  if (!teacher) throw new ApiError(404, "Teacher not found.");
+  const { status } = req.body;
+  if (teacher.status !== status) {
+    if (status === "INACTIVE") {
+      teacher.tokenVersion += 1;
+      teacher.sessionsInvalidBefore = new Date();
+    }
+    teacher.status = status;
+    await teacher.save();
+    await audit(req, status === "INACTIVE" ? "TEACHER_DEACTIVATED" : "TEACHER_REACTIVATED", status === "INACTIVE" ? "Teacher deactivated; account data retained" : "Teacher reactivated", { targetType: "Teacher", targetId: String(teacher._id) });
+    if (status === "INACTIVE") { try { await notifyAdmin("AStarCoders: teacher deactivated", `Teacher account ${teacher.email} was deactivated.`); } catch {} }
+  }
+  res.json({ success: true, teacher: publicTeacher(teacher) });
+}
 export async function deleteTeacher(req, res) {
-  const teacher = await Teacher.findById(req.params.id); if (!teacher) throw new ApiError(404, "Teacher not found.");
-  const dependencies = await Promise.all([Student.exists({ createdBy: teacher._id }), Assessment.exists({ createdBy: teacher._id })]);
-  if (dependencies.some(Boolean)) { teacher.status = "INACTIVE"; teacher.tokenVersion += 1; teacher.sessionsInvalidBefore = new Date(); await teacher.save(); await UserSession.deleteMany({ userType: "TEACHER", userId: String(teacher._id) }); await audit(req, "TEACHER_DEACTIVATED", "Teacher account deactivated to preserve assessment history", { targetType: "Teacher", targetId: String(teacher._id) }); return res.json({ success: true, deactivated: true }); }
-  await UserSession.deleteMany({ userType: "TEACHER", userId: String(teacher._id) }); await teacher.deleteOne(); await audit(req, "TEACHER_DELETED", "Teacher account deleted", { targetType: "Teacher", targetId: String(teacher._id) }); res.json({ success: true });
+  const confirmationPhrase = req.body.confirmationPhrase;
+  let deletedCounts;
+  await mongoose.connection.transaction(async (session) => {
+    const teacher = await Teacher.findById(req.params.id).session(session);
+    if (!teacher) throw new ApiError(404, "Teacher not found.");
+    if (confirmationPhrase !== `${teacher.email}-permanently-delete`) throw new ApiError(400, "The permanent deletion confirmation phrase does not match.");
+
+    const students = await Student.find({ createdBy: teacher._id }).select("_id").session(session).lean();
+    const assessments = await Assessment.find({ createdBy: teacher._id }).select("_id").session(session).lean();
+    const questions = await Question.find({ createdBy: teacher._id }).select("_id").session(session).lean();
+    const questionSets = await QuestionSet.find({ createdBy: teacher._id }).select("_id").session(session).lean();
+    const courses = await Course.find({ createdBy: teacher._id }).select("_id").session(session).lean();
+    const invites = await TeacherInvite.find({ $or: [{ email: teacher.email }, ...(teacher.username ? [{ username: teacher.username }] : [])] }).select("_id").session(session).lean();
+    const studentIds = students.map(({ _id }) => _id);
+    const assessmentIds = assessments.map(({ _id }) => _id);
+    const studentIdStrings = studentIds.map(String);
+    const attempts = await Attempt.find({ $or: [{ student: { $in: studentIds } }, { assessment: { $in: assessmentIds } }] }).select("_id").session(session).lean();
+    const attemptIds = attempts.map(({ _id }) => _id);
+    const submissions = await CodeSubmission.find({ $or: [{ attempt: { $in: attemptIds } }, { student: { $in: studentIds } }, { assessment: { $in: assessmentIds } }] }).select("_id").session(session).lean();
+    const submissionIds = submissions.map(({ _id }) => _id);
+    const attemptIdStrings = attemptIds.map(String);
+    const assessmentIdStrings = assessmentIds.map(String);
+    const relatedIdStrings = [teacher._id, ...studentIds, ...assessmentIds, ...attemptIds, ...submissionIds, ...questions.map(({ _id }) => _id), ...questionSets.map(({ _id }) => _id), ...courses.map(({ _id }) => _id), ...invites.map(({ _id }) => _id)].map(String);
+
+    await ExecutionResult.deleteMany({ submission: { $in: submissionIds } }, { session });
+    await AIReview.deleteMany({ $or: [{ submission: { $in: submissionIds } }, { assessment: { $in: assessmentIds } }] }, { session });
+    await AIReview.updateMany({ reviewedBy: teacher._id, assessment: { $nin: assessmentIds } }, { $unset: { reviewedBy: "" } }, { session });
+    await CodeSubmission.deleteMany({ _id: { $in: submissionIds } }, { session });
+    await Answer.deleteMany({ attempt: { $in: attemptIds } }, { session });
+    await ProctorEvent.deleteMany({ $or: [{ attemptId: { $in: attemptIds } }, { studentId: { $in: studentIds } }, { assessmentId: { $in: assessmentIds } }] }, { session });
+    await Result.deleteMany({ $or: [{ attempt: { $in: attemptIds } }, { student: { $in: studentIds } }, { assessment: { $in: assessmentIds } }] }, { session });
+    await AssessmentStudent.deleteMany({ $or: [{ assessment: { $in: assessmentIds } }, { student: { $in: studentIds } }] }, { session });
+    await Attempt.deleteMany({ _id: { $in: attemptIds } }, { session });
+    await Assessment.deleteMany({ _id: { $in: assessmentIds } }, { session });
+    await Student.deleteMany({ _id: { $in: studentIds } }, { session });
+    await Question.deleteMany({ _id: { $in: questions.map(({ _id }) => _id) } }, { session });
+    await QuestionSet.deleteMany({ _id: { $in: questionSets.map(({ _id }) => _id) } }, { session });
+    await Course.deleteMany({ _id: { $in: courses.map(({ _id }) => _id) } }, { session });
+    await TeacherResetToken.deleteMany({ teacher: teacher._id }, { session });
+    await TeacherInvite.deleteMany({ _id: { $in: invites.map(({ _id }) => _id) } }, { session });
+    await UserSession.deleteMany({ $or: [{ userType: "TEACHER", userId: String(teacher._id) }, { userType: "STUDENT", userId: { $in: studentIdStrings } }] }, { session });
+    await LoginEvent.deleteMany({ $or: [{ userType: "TEACHER", userId: String(teacher._id) }, { userType: "STUDENT", userId: { $in: studentIdStrings } }] }, { session });
+    await AuditLog.deleteMany({ $or: [{ actorId: { $in: [String(teacher._id), ...studentIdStrings] } }, { actorEmail: teacher.email }, { targetId: { $in: relatedIdStrings } }, { "metadata.teacherId": String(teacher._id) }, { "metadata.teacherId": { $in: studentIdStrings } }, { "metadata.studentId": { $in: studentIdStrings } }, { "metadata.attemptId": { $in: attemptIdStrings } }, { "metadata.assessmentId": { $in: assessmentIdStrings } }, { "metadata.sourceId": { $in: assessmentIdStrings } }, { "metadata.email": teacher.email }] }, { session });
+    await teacher.deleteOne({ session });
+    deletedCounts = { students: studentIds.length, assessments: assessmentIds.length, attempts: attemptIds.length, submissions: submissionIds.length };
+  });
+  await audit(req, "TEACHER_PERMANENTLY_DELETED", "A teacher account and its associated records were permanently deleted", { metadata: deletedCounts });
+  res.json({ success: true, deleted: deletedCounts });
 }
 export async function resetTeacherPassword(req, res) {
   const teacher = await Teacher.findById(req.params.id); if (!teacher) throw new ApiError(404, "Teacher not found.");

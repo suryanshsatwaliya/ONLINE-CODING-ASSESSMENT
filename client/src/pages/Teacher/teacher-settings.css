@@ -1,0 +1,16 @@
+.teacher-password-settings > p { color: var(--muted); }
+.teacher-password-form { display: grid; gap: 12px; width: min(100%, 360px); margin-top: 18px; }
+.teacher-password-form .field { margin: 0; }
+.teacher-password-control { position: relative; }
+.teacher-password-control input { width: 100%; padding-right: 44px; }
+.teacher-password-visibility { position: absolute; top: 50%; right: 8px; display: grid; width: 32px; height: 32px; place-items: center; padding: 0; border-radius: 7px; color: var(--muted, #69748a); transform: translateY(-50%); }
+.teacher-password-visibility:hover { background: var(--surface-soft, #f3f4fa); color: var(--accent, #6256d8); }
+.teacher-password-visibility:focus-visible { outline: 2px solid var(--accent, #6256d8); outline-offset: 1px; }
+.teacher-password-form .btn { justify-self: start; min-width: 180px; margin-top: 4px; }
+.teacher-password-hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.teacher-password-error,
+.teacher-password-success { margin: 0; padding: 10px 12px; border: 1px solid; border-radius: 8px; font-size: 13px; }
+.teacher-password-error { border-color: #f0c4c4; background: #fff4f4; color: #a52b2b; }
+.teacher-password-success { border-color: #bfe8d5; background: #effaf5; color: #176d50; }
+html[data-theme="dark"] .teacher-password-error { border-color: #704444; background: #382626; color: #ffb8b8; }
+html[data-theme="dark"] .teacher-password-success { border-color: #315744; background: #18382e; color: #a4e1c2; }

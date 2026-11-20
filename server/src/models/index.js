@@ -16,5 +16,6 @@ export { default as MasterAdmin } from "./MasterAdmin.js";
 export { default as AdminSession } from "./AdminSession.js";
 export { default as AuditLog } from "./AuditLog.js";
 export { default as TeacherResetToken } from "./TeacherResetToken.js";
+export { default as TeacherInvite } from "./TeacherInvite.js";
 export { default as LoginEvent } from "./LoginEvent.js";
 export { default as UserSession } from "./UserSession.js";

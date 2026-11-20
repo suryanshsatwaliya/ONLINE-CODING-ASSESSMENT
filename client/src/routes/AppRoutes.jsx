@@ -24,6 +24,7 @@ import Result from "../pages/Student/Result";
 import ExamPreview from "../pages/Teacher/ExamPreview";
 import MasterAdminApp from "../pages/Admin/MasterAdminApp";
 import TeacherPasswordReset from "../pages/Auth/TeacherPasswordReset";
+import TeacherEmailVerification from "../pages/Auth/TeacherEmailVerification";
 export default function AppRoutes() {
   const location = useLocation();
   if (location.pathname === "/admin" || location.pathname.startsWith("/admin/")) return <main className="student-page"><h1>Page not found</h1><Link to="/">Return home</Link></main>;
@@ -33,6 +34,7 @@ export default function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/login/teacher" element={<TeacherLogin />} />
         <Route path="/login/teacher/reset" element={<TeacherPasswordReset />} />
+        <Route path="/login/teacher/verify-email" element={<TeacherEmailVerification />} />
         <Route path="/login/student" element={<StudentLogin />} />
       </Route>
       <Route element={<TeacherRoute />}>

@@ -290,6 +290,14 @@ html[data-theme="dark"] .landing-secondary-link:hover { border-color: #7468dc; b
 .teacher-login-card .field { margin: 16px 0; }
 .teacher-login-card .field > span { font-size: 11px; font-weight: 700; }
 .teacher-login-card .field input { min-height: 47px; border-radius: 10px; }
+.teacher-login-password-field > label { font-size: 11px; font-weight: 700; }
+.teacher-login-password-control { position: relative; }
+.teacher-login-password-control input { width: 100%; padding-right: 44px; }
+.teacher-login-password-visibility { position: absolute; top: 50%; right: 8px; display: grid; width: 32px; height: 32px; place-items: center; padding: 0; border-radius: 7px; color: var(--muted, #69748a); transform: translateY(-50%); }
+.teacher-login-password-visibility:hover { background: var(--surface-soft, #f3f4fa); color: var(--accent, #6256d8); }
+.teacher-login-password-visibility:focus-visible { outline: 2px solid var(--accent, #6256d8); outline-offset: 1px; }
+.teacher-forgot-password { display: block; margin-top: 0; color: var(--accent, #6256d8); font-size: 12px; text-align: right; text-decoration: none; }
+.teacher-forgot-password:hover { text-decoration: underline; }
 .teacher-login-card > .btn { width: 100%; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; margin: 8px 0 18px; border-radius: 10px; }
 .teacher-login-back { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted, #69748a); font-size: 11px; transition: color .15s ease; }
 .teacher-login-back:hover { color: #6256d8; }

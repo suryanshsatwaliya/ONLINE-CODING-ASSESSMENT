@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import {
   Teacher,
+  TeacherInvite,
   Student,
   Assessment,
   AssessmentStudent,
@@ -17,6 +18,7 @@ import { audit } from "../services/audit.service.js";
 import { hashToken, randomToken } from "../services/security.service.js";
 import { sendEmail } from "../services/email.service.js";
 import { randomUUID } from "node:crypto";
+import crypto from "node:crypto";
 
 export function teacherCaptchaConfig(req, res) {
   res.json({
@@ -45,7 +47,7 @@ export async function teacherLogin(req, res) {
   ]);
   res.json({
     token: issueToken({ id: String(t._id), role: "TEACHER", tokenVersion: t.tokenVersion || 0, jti }),
-    user: { id: t._id, name: t.name, email: t.email, role: "TEACHER" },
+    user: { id: t._id, name: t.name, email: t.email, username: t.username, role: "TEACHER" },
   });
 }
 export async function verifyStudent(req, res) {
@@ -105,6 +107,8 @@ export async function studentLogin(req, res) {
   });
 }
 const passwordRule = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{12,128}$/;
+const temporaryTeacherPassword = () => `${crypto.randomBytes(12).toString("base64url")}aA1!`;
+const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 function jwtLifetimeMs(value) { const match = /^(\d+)(s|m|h|d)$/.exec(String(value)); if (!match) return 8 * 60 * 60 * 1000; return Number(match[1]) * ({ s: 1000, m: 60000, h: 3600000, d: 86400000 }[match[2]]); }
 async function createLoginSession(req, userType, userId, jti) { await UserSession.create({ userType, userId: String(userId), jti, expiresAt: new Date(Date.now() + jwtLifetimeMs(env.JWT_EXPIRES_IN)), ip: req.ip, userAgent: req.get("user-agent")?.slice(0, 300), lastSeenAt: new Date() }); }
 export async function logout(req, res) { if (req.user?.jti) await UserSession.deleteOne({ jti: req.user.jti }); res.json({ success: true }); }
@@ -115,10 +119,41 @@ export async function requestTeacherReset(req, res) {
     const token = randomToken(); await TeacherResetToken.deleteMany({ teacher: teacher._id, usedAt: { $exists: false } });
     await TeacherResetToken.create({ teacher: teacher._id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 15 * 60000) });
     const link = `${String(env.PUBLIC_APP_URL || env.CLIENT_URL).split(",")[0].trim().replace(/\/$/, "")}/login/teacher/reset?token=${encodeURIComponent(token)}`;
-    try { await sendEmail({ to: teacher.email, subject: "Reset your AStarCoders password", text: `Use this link within 15 minutes to reset your password: ${link}` }); }
-    catch (error) { console.error("Teacher reset email failed:", error.message); }
+    try {
+      const sent = await sendEmail({ to: teacher.email, subject: "Reset your AStarCoders password", text: `Use this link within 15 minutes to reset your password: ${link}` });
+      if (!sent.sent) throw new Error("Email provider is not configured.");
+    } catch (error) {
+      await TeacherResetToken.deleteOne({ tokenHash: hashToken(token) });
+      console.error("Teacher reset email failed:", error.message);
+    }
   }
-  res.json({ message: "If an account matches those details, password reset instructions will be sent." });
+  res.json({ message: "If an account matches those details, reset instructions will be sent. If you don’t receive an email, check spam or contact your administrator." });
+}
+export async function verifyTeacherEmail(req, res) {
+  const invite = await TeacherInvite.findOne({ tokenHash: hashToken(req.body.token), expiresAt: { $gt: new Date() } });
+  if (!invite) throw new ApiError(400, "This verification link is invalid or expired. Ask the administrator to send a new one.");
+  if (await Teacher.exists({ $or: [{ email: invite.email }, { username: invite.username }] })) {
+    await TeacherInvite.deleteOne({ _id: invite._id });
+    throw new ApiError(409, "This email or username has already been assigned. Ask the administrator for help.");
+  }
+  const temporaryPassword = temporaryTeacherPassword();
+  const teacher = await Teacher.create({ name: invite.name, email: invite.email, username: invite.username, passwordHash: await bcrypt.hash(temporaryPassword, 12), role: "TEACHER", status: "ACTIVE" });
+  try {
+    const sent = await sendEmail({
+      to: invite.email,
+      subject: "Your AStarCoders teacher login",
+      text: `Your email is verified and your teacher account is ready. Username: ${invite.username}. Temporary password: ${temporaryPassword}. Sign in and change this password as soon as possible.`,
+      html: `<p>Your email is verified and your AStarCoders teacher account is ready.</p><p>Username: <strong>${escapeHtml(invite.username)}</strong><br>Temporary password: <strong>${escapeHtml(temporaryPassword)}</strong></p><p>Sign in and change this password as soon as possible.</p>`,
+    });
+    if (!sent.sent) throw new Error("Email provider is not configured.");
+  } catch (error) {
+    await teacher.deleteOne();
+    console.error("Teacher credential email failed:", error.message);
+    throw new ApiError(502, "Email verified, but login credentials could not be delivered. Ask the administrator to send a new verification email.");
+  }
+  await TeacherInvite.deleteOne({ _id: invite._id });
+  await audit(req, "TEACHER_EMAIL_VERIFIED", "Teacher email verified and account created", { targetType: "Teacher", targetId: String(teacher._id), metadata: { email: teacher.email } });
+  res.json({ success: true, message: "Email verified. Your teacher account is ready and the login credentials have been sent." });
 }
 export async function resetTeacherPassword(req, res) {
   const { token, password, confirmation } = req.body;
@@ -136,7 +171,59 @@ export async function resetTeacherPassword(req, res) {
   await audit(req, "TEACHER_PASSWORD_RESET", "Teacher password reset completed", { actorType: "TEACHER", actorId: String(teacher._id), actorEmail: teacher.email });
   res.json({ success: true });
 }
+export async function changeTeacherPassword(req, res) {
+  const { currentPassword, newPassword, confirmation } = req.body;
+  if (newPassword !== confirmation) throw new ApiError(400, "Passwords do not match.");
+  if (!passwordRule.test(newPassword)) throw new ApiError(400, "Use at least 12 characters with uppercase, lowercase, number, and special character.");
+
+  const teacher = await Teacher.findById(req.user.id).select("+passwordHash");
+  if (!teacher || teacher.status === "INACTIVE" || !(await bcrypt.compare(currentPassword, teacher.passwordHash))) {
+    throw new ApiError(401, "Current password is incorrect.");
+  }
+
+  teacher.passwordHash = await bcrypt.hash(newPassword, 12);
+  await teacher.save();
+  await UserSession.deleteMany({
+    userType: "TEACHER",
+    userId: String(teacher._id),
+    ...(req.user.jti ? { jti: { $ne: req.user.jti } } : {}),
+  });
+  await audit(req, "TEACHER_PASSWORD_CHANGED", "Teacher password changed", {
+    actorType: "TEACHER",
+    actorId: String(teacher._id),
+    actorEmail: teacher.email,
+  });
+  res.json({ success: true });
+}
+export async function changeTeacherUsername(req, res) {
+  const username = req.body.username.trim().toLowerCase();
+  if (await Teacher.exists({ username, _id: { $ne: req.user.id } }) || await TeacherInvite.exists({ username })) {
+    throw new ApiError(409, "That username is already in use. Choose another one.");
+  }
+
+  const teacher = await Teacher.findById(req.user.id);
+  if (!teacher || teacher.status === "INACTIVE") throw new ApiError(404, "Teacher account not found.");
+  teacher.username = username;
+  try {
+    await teacher.save();
+  } catch (error) {
+    if (error.code === 11000) throw new ApiError(409, "That username is already in use. Choose another one.");
+    throw error;
+  }
+  await audit(req, "TEACHER_USERNAME_CHANGED", "Teacher username changed", {
+    actorType: "TEACHER",
+    actorId: String(teacher._id),
+    actorEmail: teacher.email,
+    metadata: { username },
+  });
+  res.json({ username: teacher.username });
+}
 export async function me(req, res) {
+  if (req.user.role === "TEACHER") {
+    const teacher = await Teacher.findById(req.user.id).select("name email username status");
+    if (!teacher || teacher.status === "INACTIVE") throw new ApiError(404, "Teacher account not found.");
+    return res.json({ user: { id: teacher._id, name: teacher.name, email: teacher.email, username: teacher.username, role: "TEACHER" } });
+  }
   if (req.user.role !== "STUDENT") return res.json(req.user);
   const [student, attempt, assignment] = await Promise.all([
     Student.findById(req.user.id).select("name uid section email"),

@@ -9,8 +9,6 @@ import QRCode from "qrcode";
 import { notifyAdmin } from "../services/email.service.js";
 import { verifyTeacherCaptcha } from "../services/turnstile.service.js";
 import { readCookie } from "../utils/adminCookies.js";
-import { logAdminSession } from "../utils/adminSessionDiagnostics.js";
-import mongoose from "mongoose";
 const cookieBase = () => `Path=/; HttpOnly; SameSite=Lax${env.NODE_ENV === "production" ? "; Secure" : ""}`;
 const setSessionCookies = (res, token, csrf) => res.setHeader("Set-Cookie", [
   `master_session=${encodeURIComponent(token)}; ${cookieBase()}`,
@@ -31,14 +29,9 @@ export async function start(req, res) {
     const session = await AdminSession.findOne({ tokenHash: hashToken(token) }).select("+csrfToken +routeId").populate("admin", "email totpEnabled");
     const routeId = entry.split("/")[0];
     if (session?.admin?.totpEnabled && session.expiresAt > new Date() && session.status === "ACTIVE" && session.routeId && routeId === session.routeId) {
-      logAdminSession("entry_lookup_found", { endpoint: req.path, sessionCookiePresent: true, sessionRef: String(session._id), sessionStatus: session.status, dbReadyState: mongoose.connection.readyState });
       return res.json({ allowed: true, authenticated: true, routeId: session.routeId, csrfToken: session.csrfToken, user: { email: session.admin.email } });
     }
-    const reason = !session ? "not_found" : session.expiresAt <= new Date() ? "expired" : session.status !== "ACTIVE" ? "not_active" : "route_mismatch";
-    logAdminSession(`entry_lookup_${reason}`, { endpoint: req.path, sessionCookiePresent: true, sessionFound: Boolean(session), ...(session ? { sessionRef: String(session._id), sessionStatus: session.status } : {}), dbReadyState: mongoose.connection.readyState });
     await AdminSession.deleteOne({ tokenHash: hashToken(token) });
-  } else {
-    logAdminSession("entry_lookup_missing_cookie", { endpoint: req.path, cookieHeaderPresent: Boolean(cookieHeader), sessionCookiePresent: false, dbReadyState: mongoose.connection.readyState });
   }
   clearSessionCookies(res);
   res.json({ allowed: entry === env.MASTER_ADMIN_PATH, authenticated: false });
@@ -50,7 +43,6 @@ export function entryRedirect(req, res) {
 async function createSession(admin, status, req, res, maxAge = sessionDuration()) {
   const token = randomToken(); const csrf = randomToken(24); const expiresAt = new Date(Date.now() + maxAge);
   const session = await AdminSession.create({ admin: admin._id, tokenHash: hashToken(token), csrfHash: hashToken(csrf), csrfToken: csrf, status, expiresAt, ip: ip(req), userAgent: req.get("user-agent")?.slice(0, 300) });
-  logAdminSession("created", { sessionRef: String(session._id), sessionStatus: status, expiresInMs: maxAge, dbReadyState: mongoose.connection.readyState });
   setSessionCookies(res, token, csrf); return { csrfToken: csrf, expiresAt, state: status };
 }
 export async function login(req, res) {

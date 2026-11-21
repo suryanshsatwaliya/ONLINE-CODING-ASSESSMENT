@@ -1,12 +1,12 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowRight, Eye, EyeOff, GraduationCap, ShieldCheck } from "lucide-react";
+import { ArrowRight, GraduationCap, ShieldCheck } from "lucide-react";
 import { authService } from "../../services/authService";
 import { api, errorMessage } from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../context/ThemeContext";
 import Navbar from "../../components/layout/Navbar";
-import Input from "../../components/common/Input";
+import LabelInput from "../../components/common/LabelInput";
 import Button from "../../components/common/Button";
 import TeacherLoginStory from "./TeacherLoginStory";
 export { useCodeTyping } from "./teacherLoginCode";
@@ -87,7 +87,6 @@ export const TurnstileWidget = memo(function TurnstileWidget({ siteKey, theme, o
 
 export default function TeacherLogin() {
   const [form, setForm] = useState({ email: "", password: "" });
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   // The public site key is bundled with the client so the widget can render
@@ -150,39 +149,29 @@ export default function TeacherLogin() {
         <TeacherLoginStory />
 
         <form className="teacher-login-card card" onSubmit={submit}>
+          <span className="card-code-watermark top" aria-hidden="true">{"const auth = useAuth();\nreturn <SignIn />;\n$ npm run dev"}</span>
+          <span className="card-code-watermark bottom" aria-hidden="true">{"<form action=\"/signin\">\n  <input type=\"email\" />\n</form>\n$ git status"}</span>
           <div className="teacher-login-card-icon"><GraduationCap size={22} /></div>
           <h2>Sign in</h2>
           <fieldset disabled={busy} className="teacher-login-fields">
-            <Input
-              label="Email address or username"
+            <LabelInput
+              label="Email or username"
+              variant="notched"
               type="text"
               autoComplete="username"
               required
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
-            <div className="field teacher-login-password-field">
-              <label htmlFor="teacher-login-password">Password</label>
-              <div className="teacher-login-password-control">
-                <input
-                  id="teacher-login-password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                />
-                <button
-                  className="teacher-login-password-visibility"
-                  type="button"
-                  aria-label={`${showPassword ? "Hide" : "Show"} password`}
-                  aria-pressed={showPassword}
-                  onClick={() => setShowPassword((current) => !current)}
-                >
-                  {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
-                </button>
-              </div>
-            </div>
+            <LabelInput
+              label="Password"
+              variant="notched"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
           </fieldset>
           <Link className="teacher-forgot-password" to="/login/teacher/reset">Forgot password?</Link>
           {error && <p className="error teacher-login-error" role="alert">{error}</p>}

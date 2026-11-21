@@ -5,7 +5,7 @@ import { authService } from "../../services/authService";
 import { errorMessage } from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
 import Navbar from "../../components/layout/Navbar";
-import Input from "../../components/common/Input";
+import LabelInput from "../../components/common/LabelInput";
 import Button from "../../components/common/Button";
 import { chromeOnlyMessage, incognitoRequiredMessage, isGoogleChrome, isMobilePhone } from "../../utils/browserPolicy";
 
@@ -102,12 +102,14 @@ export default function StudentLogin() {
           <div className="entry-footnote"><ShieldCheck size={18} /><span>Only students assigned to an assessment can join it.</span></div>
         </section>
         <form className="entry-form" onSubmit={submit}>
+          <span className="card-code-watermark top" aria-hidden="true">{"const quiz = await fetch('/api/quiz');\nreturn <Assessment data={quiz} />;"}</span>
+          <span className="card-code-watermark bottom" aria-hidden="true">{"<form onsubmit=\"join()\">\n  <button>Start</button>\n</form>\n$ npm run build"}</span>
           <div className="entry-form-icon"><KeyRound size={24} /></div>
           <h2>Join your assessment</h2>
           <fieldset disabled={busy}>
-            <Input label="Student UID" placeholder="Enter your student UID" autoComplete="username" autoCapitalize="characters" spellCheck={false} maxLength={40} required value={uid} onChange={(e) => setUid(e.target.value.toUpperCase())} />
-            <Input label="Assessment code" className="entry-code-input" placeholder="A7K2M9" autoComplete="off" autoCapitalize="characters" spellCheck={false} minLength={6} maxLength={6} pattern="[A-Z0-9]{6}" title="Enter 6 uppercase letters and numbers." aria-describedby="entry-code-hint" required value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))} />
-            <p id="entry-code-hint" className="entry-code-hint">6 characters · uppercase letters and numbers</p>
+            <LabelInput label="Student UID" variant="notched" autoComplete="username" autoCapitalize="characters" spellCheck={false} maxLength={40} required value={uid} onChange={(e) => setUid(e.target.value.toUpperCase())} />
+            <LabelInput label="Assessment code" variant="notched" type="text" className="entry-code-input" placeholder="" autoComplete="off" autoCapitalize="characters" spellCheck={false} minLength={6} maxLength={6} pattern="[A-Z0-9]{6}" title="Enter 6 uppercase letters and numbers." aria-describedby="entry-code-hint" required value={accessCode} onChange={(e) => setAccessCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))} />
+
             {error && <p className="notice error" role="alert">{error}</p>}
             {!chromeAllowed && <p className="browser-block-warning" role="alert">{incognitoRequiredMessage}</p>}
             <Button type="submit" disabled={busy || !chromeAllowed}>{busy ? "Checking your details…" : "Join assessment"}<ArrowRight size={18} /></Button>

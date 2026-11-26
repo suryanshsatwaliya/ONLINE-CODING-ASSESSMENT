@@ -216,6 +216,8 @@ export function convertProblem(problem) {
   if (!problem || problem.isPaidOnly || !problem.content)
     throw new ApiError(422, "This problem is not publicly available. You can create a coding question manually.");
   const content = plainText(problem.content);
+  const statement = content.split(/(?:^|\n)\s*(?:Example\s*\d+\s*:|Constraints\s*:|Follow[ -]?up\s*:)/i)[0].trim();
+  const constraints = content.match(/(?:^|\n)\s*Constraints\s*:\s*([\s\S]*?)(?=\n\s*Follow[ -]?up\s*:|$)/i)?.[1]?.trim() || "";
   let metadata = {};
   try { metadata = JSON.parse(problem.metaData || "{}"); } catch { /* Imported content remains editable. */ }
   const params = Array.isArray(metadata.params) ? metadata.params : [];
@@ -287,8 +289,8 @@ export function convertProblem(problem) {
       title: String(problem.title || "").slice(0, 200),
       type: "CODING", source: "EXTERNAL",
       externalReference: `${origin}/problems/${problem.titleSlug}/`,
-      description: content.slice(0, 20000),
-      constraints: (content.split(/Constraints\s*:/i)[1] || "").slice(0, 20000).trim(),
+      description: statement.slice(0, 20000),
+      constraints: constraints.slice(0, 20000),
       difficulty: ["EASY", "MEDIUM", "HARD"].includes(problem.difficulty?.toUpperCase()) ? problem.difficulty.toUpperCase() : "MEDIUM",
       tags: (problem.topicTags || []).slice(0, 20).map((tag) => tag.name.slice(0, 50)),
       inputFormat: count
